@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'JARZ CDN Stack - CloudFront distribution with S3 origin for JARZ archive streaming'
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name of the S3 bucket containing JARZ archives
+  
+  PriceClass:
+    Type: String
+    Default: PriceClass_100
+    AllowedValues:
+      - PriceClass_100
+      - PriceClass_200
+      - PriceClass_All
+    Description: CloudFront price class (100=NA+EU, 200=+Asia, All=Global)
+
+Resources:
+  # Origin Access Identity for secure S3 access
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub 'OAI for JARZ bucket ${BucketName}'
+
+  # S3 Bucket Policy allowing CloudFront access
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BucketName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
+            Action: s3:GetObject
+            Resource: !Sub 'arn:aws:s3:::${BucketName}/*'
+
+  # Cache Policy optimized for JARZ archives (immutable, long TTL)
+  JarzCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${AWS::StackName}-JarzCachePolicy'
+        Comment: 'Cache policy for immutable JARZ archives with range request support'
+        DefaultTTL: 86400      # 24 hours
+        MaxTTL: 31536000       # 1 year
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - Range              # Cache range requests separately
+              - If-Range
+          QueryStringsConfig:
+            QueryStringBehavior: none
+          EnableAcceptEncodingGzip: false
+          EnableAcceptEncodingBrotli: false
+
+  # Origin Request Policy to forward Range header
+  RangeRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub '${AWS::StackName}-RangeRequestPolicy'
+        Comment: 'Forward Range header to S3 origin'
+        CookiesConfig:
+          CookieBehavior: none
+        HeadersConfig:
+          HeaderBehavior: whitelist
+          Headers:
+            - Range
+            - If-Range
+        QueryStringsConfig:
+          QueryStringBehavior: none
+
+  # CloudFront Distribution
+  JarzDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub 'JARZ CDN for ${BucketName}'
+        Enabled: true
+        HttpVersion: http2and3    # HTTP/2 + HTTP/3 (QUIC)
+        PriceClass: !Ref PriceClass
+        
+        Origins:
+          - Id: S3Origin
+            DomainName: !Sub '${BucketName}.s3.${AWS::Region}.amazonaws.com'
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOAI}'
+
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: https-only
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          CachePolicyId: !Ref JarzCachePolicy
+          OriginRequestPolicyId: !Ref RangeRequestPolicy
+          Compress: false         # JARZ is already compressed
+
+        # Optional: Custom error responses
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ErrorCachingMinTTL: 60
+
+Outputs:
+  DistributionId:
+    Description: CloudFront Distribution ID
+    Value: !Ref JarzDistribution
+    Export:
+      Name: !Sub '${AWS::StackName}-DistributionId'
+
+  DistributionDomainName:
+    Description: CloudFront Distribution Domain Name (use this in CdnJarzClassLoader)
+    Value: !GetAtt JarzDistribution.DomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-DomainName'
+
+  JarzBaseUrl:
+    Description: Base URL for JARZ archives
+    Value: !Sub 'https://${JarzDistribution.DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-BaseUrl'

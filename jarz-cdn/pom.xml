@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>jdk.incubator</groupId>
+        <artifactId>jarz-parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>jarz-cdn</artifactId>
+    <name>JARZ CDN ClassLoader</name>
+    <description>
+        Cloud-agnostic CDN ClassLoader using JDK 21+ HttpClient with HTTP/2 and virtual threads.
+        Zero external dependencies - works with AWS CloudFront, Azure Front Door, Google Cloud CDN.
+    </description>
+
+    <dependencies>
+        <!-- Internal: JARZ core format -->
+        <dependency>
+            <groupId>jdk.incubator</groupId>
+            <artifactId>jarz-core</artifactId>
+        </dependency>
+
+        <!-- ZSTD compression -->
+        <dependency>
+            <groupId>com.github.luben</groupId>
+            <artifactId>zstd-jni</artifactId>
+        </dependency>
+
+        <!-- JMH for benchmarking -->
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Test dependencies only -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock</artifactId>
+            <version>3.3.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Integration test dependencies -->
+        <dependency>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-core</artifactId>
+            <version>2.3.10.Final</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>minio</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.21.29</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- BouncyCastle for SSL certificate generation in tests -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.77</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Test target JAR (downloaded separately, NOT on classpath) -->
+        <!-- Maven dependency plugin downloads log4j-api JAR to target/test-jars/ -->
+        <!-- This JAR is converted to JARZ and uploaded to S3 for testing -->
+        <!-- CRITICAL: No <dependency> here to prevent classpath pollution -->
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Multi-release JAR with Java 21 virtual threads -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>compile-java21</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <release>21</release>
+                            <compileSourceRoots>
+                                <compileSourceRoot>${project.basedir}/src/main/java21</compileSourceRoot>
+                            </compileSourceRoots>
+                            <multiReleaseOutput>true</multiReleaseOutput>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>test-compile-java21</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <release>21</release>
+                            <compileSourceRoots>
+                                <compileSourceRoot>${project.basedir}/src/test/java21</compileSourceRoot>
+                            </compileSourceRoots>
+                            <outputDirectory>${project.build.directory}/test-classes-java21</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- Multi-release JAR packaging -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Multi-Release>true</Multi-Release>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <!-- Copy dependencies for integration tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-test-jars</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.apache.logging.log4j</groupId>
+                                    <artifactId>log4j-api</artifactId>
+                                    <version>2.20.0</version>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/test-jars</outputDirectory>
+                                    <destFileName>log4j-api-2.20.0.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Exec plugin for running demos -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <mainClass>jdk.incubator.jarz.cdn.Log4j2JarzDemo</mainClass>
+                    <classpathScope>test</classpathScope>
+                </configuration>
+            </plugin>
+
+            <!-- Surefire plugin for Java 21 only (Java 11 disabled for 2026 release) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.2</version>
+                <configuration>
+                    <!-- Skip default execution (Java 11) -->
+                    <skip>true</skip>
+                </configuration>
+                <executions>
+                    <!-- Java 21 execution only -->
+                    <execution>
+                        <id>test-java21</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <testClassesDirectory>${project.build.directory}/test-classes-java21</testClassesDirectory>
+                            <forkCount>1</forkCount>
+                            <reuseForks>false</reuseForks>
+                            <systemPropertyVariables>
+                                <java.version>21</java.version>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

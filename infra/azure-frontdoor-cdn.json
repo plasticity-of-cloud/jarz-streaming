@@ -1,0 +1,276 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Azure Front Door + Blob Storage CDN setup for JARZ ClassLoader with HTTP/2 and range request support"
+  },
+  "parameters": {
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name for the storage account (must be globally unique)"
+      },
+      "minLength": 3,
+      "maxLength": 24
+    },
+    "containerName": {
+      "type": "string",
+      "defaultValue": "jarz-archives",
+      "metadata": {
+        "description": "Name for the blob container to store JARZ files"
+      }
+    },
+    "frontDoorName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name for the Front Door profile"
+      }
+    },
+    "customDomain": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Custom domain name for Front Door (optional)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for resources"
+      }
+    }
+  },
+  "variables": {
+    "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+    "frontDoorEndpointName": "[concat(parameters('frontDoorName'), '-endpoint')]",
+    "originGroupName": "blob-storage-origin-group",
+    "originName": "blob-storage-origin",
+    "routeName": "jarz-route",
+    "hasCustomDomain": "[not(empty(parameters('customDomain')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "accessTier": "Hot",
+        "allowBlobPublicAccess": false,
+        "allowSharedKeyAccess": true,
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true,
+        "networkAcls": {
+          "defaultAction": "Allow"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2023-01-01",
+      "name": "[concat(parameters('storageAccountName'), '/default')]",
+      "dependsOn": [
+        "[variables('storageAccountId')]"
+      ],
+      "properties": {
+        "cors": {
+          "corsRules": [
+            {
+              "allowedOrigins": ["*"],
+              "allowedMethods": ["GET", "HEAD", "OPTIONS"],
+              "allowedHeaders": ["*"],
+              "exposedHeaders": ["Accept-Ranges", "Content-Range", "Content-Length"],
+              "maxAgeInSeconds": 3600
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-01-01",
+      "name": "[concat(parameters('storageAccountName'), '/default/', parameters('containerName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('frontDoorName')]",
+      "location": "Global",
+      "sku": {
+        "name": "Standard_AzureFrontDoor"
+      },
+      "properties": {
+        "originResponseTimeoutSeconds": 60
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/', variables('frontDoorEndpointName'))]",
+      "location": "Global",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorName'))]"
+      ],
+      "properties": {
+        "enabledState": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/', variables('originGroupName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorName'))]"
+      ],
+      "properties": {
+        "loadBalancingSettings": {
+          "sampleSize": 4,
+          "successfulSamplesRequired": 3,
+          "additionalLatencyInMilliseconds": 50
+        },
+        "healthProbeSettings": {
+          "probePath": "/",
+          "probeRequestType": "HEAD",
+          "probeProtocol": "Https",
+          "probeIntervalInSeconds": 100
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/', variables('originGroupName'), '/', variables('originName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorName'), variables('originGroupName'))]",
+        "[variables('storageAccountId')]"
+      ],
+      "properties": {
+        "hostName": "[replace(replace(reference(variables('storageAccountId')).primaryEndpoints.blob, 'https://', ''), '/', '')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "originHostHeader": "[replace(replace(reference(variables('storageAccountId')).primaryEndpoints.blob, 'https://', ''), '/', '')]",
+        "priority": 1,
+        "weight": 1000,
+        "enabledState": "Enabled",
+        "enforceCertificateNameCheck": true
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/', variables('frontDoorEndpointName'), '/', variables('routeName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorName'), variables('frontDoorEndpointName'))]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('frontDoorName'), variables('originGroupName'), variables('originName'))]"
+      ],
+      "properties": {
+        "customDomains": [],
+        "originGroup": {
+          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorName'), variables('originGroupName'))]"
+        },
+        "supportedProtocols": ["Http", "Https"],
+        "patternsToMatch": ["/*"],
+        "forwardingProtocol": "HttpsOnly",
+        "linkToDefaultDomain": "Enabled",
+        "httpsRedirect": "Enabled",
+        "enabledState": "Enabled",
+        "cacheConfiguration": {
+          "queryStringCachingBehavior": "IgnoreQueryString",
+          "compressionSettings": {
+            "contentTypesToCompress": [],
+            "isCompressionEnabled": false
+          },
+          "cacheBehavior": "HonorOrigin"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/ruleSets",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/JarzOptimizationRules')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/ruleSets/rules",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/JarzOptimizationRules/OptimizeJarzFiles')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/ruleSets', parameters('frontDoorName'), 'JarzOptimizationRules')]"
+      ],
+      "properties": {
+        "order": 1,
+        "conditions": [
+          {
+            "name": "UrlFileExtension",
+            "parameters": {
+              "operator": "Equal",
+              "negateCondition": false,
+              "matchValues": ["jarz2"],
+              "transforms": ["Lowercase"],
+              "typeName": "DeliveryRuleUrlFileExtensionMatchConditionParameters"
+            }
+          }
+        ],
+        "actions": [
+          {
+            "name": "ModifyResponseHeader",
+            "parameters": {
+              "headerAction": "Overwrite",
+              "headerName": "Accept-Ranges",
+              "value": "bytes",
+              "typeName": "DeliveryRuleHeaderActionParameters"
+            }
+          },
+          {
+            "name": "ModifyResponseHeader",
+            "parameters": {
+              "headerAction": "Overwrite",
+              "headerName": "Cache-Control",
+              "value": "public, max-age=86400, immutable",
+              "typeName": "DeliveryRuleHeaderActionParameters"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "storageAccountName": {
+      "type": "string",
+      "value": "[parameters('storageAccountName')]"
+    },
+    "containerName": {
+      "type": "string",
+      "value": "[parameters('containerName')]"
+    },
+    "frontDoorEndpointHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorName'), variables('frontDoorEndpointName'))).hostName]"
+    },
+    "jarzUrlBase": {
+      "type": "string",
+      "value": "[concat('https://', reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorName'), variables('frontDoorEndpointName'))).hostName)]"
+    },
+    "storageAccountKey": {
+      "type": "string",
+      "value": "[listKeys(variables('storageAccountId'), '2023-01-01').keys[0].value]"
+    },
+    "exampleUsage": {
+      "type": "string",
+      "value": "[concat('// Java code example for Azure Front Door:\nString jarzUrl = \"https://', reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorName'), variables('frontDoorEndpointName'))).hostName, '/', parameters('containerName'), '/app.jarz\";\ntry (CdnJarzClassLoader loader = new CdnJarzClassLoader(jarzUrl)) {\n    Class<?> clazz = loader.loadClass(\"com.example.MyClass\");\n}')]"
+    }
+  }
+}

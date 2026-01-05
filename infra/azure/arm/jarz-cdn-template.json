@@ -1,0 +1,136 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "JARZ CDN Stack - Azure Front Door with Blob Storage origin for JARZ archive streaming"
+  },
+  "parameters": {
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Storage Account containing JARZ archives"
+      }
+    },
+    "containerName": {
+      "type": "string",
+      "defaultValue": "jarz",
+      "metadata": {
+        "description": "Blob container name for JARZ archives"
+      }
+    },
+    "frontDoorName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name for the Front Door profile"
+      }
+    }
+  },
+  "variables": {
+    "frontDoorSkuName": "Standard_AzureFrontDoor",
+    "endpointName": "[concat(parameters('frontDoorName'), '-endpoint')]",
+    "originGroupName": "jarz-origin-group",
+    "originName": "blob-origin",
+    "routeName": "jarz-route"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cdn/profiles",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('frontDoorName')]",
+      "location": "global",
+      "sku": {
+        "name": "[variables('frontDoorSkuName')]"
+      },
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/', variables('endpointName'))]",
+      "location": "global",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorName'))]"
+      ],
+      "properties": {
+        "enabledState": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/', variables('originGroupName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', parameters('frontDoorName'))]"
+      ],
+      "properties": {
+        "loadBalancingSettings": {
+          "sampleSize": 4,
+          "successfulSamplesRequired": 3
+        },
+        "healthProbeSettings": {
+          "probePath": "/",
+          "probeRequestType": "HEAD",
+          "probeProtocol": "Https",
+          "probeIntervalInSeconds": 100
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/', variables('originGroupName'), '/', variables('originName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorName'), variables('originGroupName'))]"
+      ],
+      "properties": {
+        "hostName": "[concat(parameters('storageAccountName'), '.blob.core.windows.net')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "originHostHeader": "[concat(parameters('storageAccountName'), '.blob.core.windows.net')]",
+        "priority": 1,
+        "weight": 1000,
+        "enabledState": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('frontDoorName'), '/', variables('endpointName'), '/', variables('routeName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorName'), variables('endpointName'))]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', parameters('frontDoorName'), variables('originGroupName'), variables('originName'))]"
+      ],
+      "properties": {
+        "originGroup": {
+          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorName'), variables('originGroupName'))]"
+        },
+        "supportedProtocols": [
+          "Https"
+        ],
+        "patternsToMatch": [
+          "/*"
+        ],
+        "forwardingProtocol": "HttpsOnly",
+        "linkToDefaultDomain": "Enabled",
+        "httpsRedirect": "Enabled",
+        "enabledState": "Enabled",
+        "cacheConfiguration": {
+          "queryStringCachingBehavior": "IgnoreQueryString",
+          "compressionSettings": {
+            "isCompressionEnabled": false
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "frontDoorEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorName'), variables('endpointName'))).hostName]"
+    },
+    "jarzBaseUrl": {
+      "type": "string",
+      "value": "[concat('https://', reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorName'), variables('endpointName'))).hostName)]"
+    }
+  }
+}
