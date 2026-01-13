@@ -38,11 +38,10 @@ public enum BlockType {
     public int id() { return id; }
     
     public int compressionLevel() { 
-        // NATIVE always uses level 1, STORED never compresses
-        if (this == NATIVE) return 1;
+        // STORED never compresses
         if (this == STORED) return 0;
         
-        // Use configured level for main content types (read dynamically for testing)
+        // All other types (including NATIVE) use configured level
         return getConfiguredCompressionLevel();
     }
     

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARZ Streaming - ZSTD Compressed Class Archives</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem 0; }
+        h1 { font-size: 3rem; margin-bottom: 0.5rem; }
+        .subtitle { font-size: 1.2rem; opacity: 0.9; }
+        main { padding: 3rem 0; }
+        .hero { text-align: center; margin-bottom: 3rem; }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin: 3rem 0; }
+        .feature { background: #f8f9fa; padding: 2rem; border-radius: 8px; border-left: 4px solid #667eea; }
+        .feature h3 { color: #667eea; margin-bottom: 1rem; }
+        .code-block { background: #2d3748; color: #e2e8f0; padding: 1.5rem; border-radius: 8px; overflow-x: auto; margin: 1rem 0; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
+        .stat { text-align: center; padding: 1.5rem; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; margin-top: 0.5rem; }
+        footer { background: #2d3748; color: white; text-align: center; padding: 2rem 0; }
+        .btn { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 0.5rem; transition: background 0.3s; }
+        .btn:hover { background: #5a67d8; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>JARZ Streaming</h1>
+            <p class="subtitle">ZSTD Compressed Class Archives for Modern Java Applications</p>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <section class="hero">
+                <h2>Revolutionary Java Class Loading</h2>
+                <p>Stream compressed Java classes directly from CDN with 27.4% smaller archives and 3.5x faster decompression</p>
+                <a href="#features" class="btn">Learn More</a>
+                <a href="https://github.com/plasticity-of-cloud/jdk-enhancements" class="btn">View on GitHub</a>
+            </section>
+
+            <section class="stats">
+                <div class="stat">
+                    <div class="stat-number">27.4%</div>
+                    <div class="stat-label">Storage Reduction</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">3.5x</div>
+                    <div class="stat-label">Faster Decompression</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">6x</div>
+                    <div class="stat-label">Faster Container Startup</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">90%</div>
+                    <div class="stat-label">Image Size Reduction</div>
+                </div>
+            </section>
+
+            <section id="features" class="features">
+                <div class="feature">
+                    <h3>🚀 CDN Streaming</h3>
+                    <p>Load Java classes directly from CloudFront CDN with HTTP/2 and range requests. Zero dependencies, virtual threads support.</p>
+                </div>
+                <div class="feature">
+                    <h3>📦 ZSTD Compression</h3>
+                    <p>Block-based ZSTD compression with dependency-aware clustering achieves 27.4% better compression than JAR files.</p>
+                </div>
+                <div class="feature">
+                    <h3>☁️ S3 Integration</h3>
+                    <p>Stream individual classes from S3 without downloading entire archives. Perfect for microservices and containers.</p>
+                </div>
+                <div class="feature">
+                    <h3>🔧 Drop-in Replacement</h3>
+                    <p>Compatible with existing JAR workflows. Use JarzApplicationClassLoader as a direct URLClassLoader replacement.</p>
+                </div>
+            </section>
+
+            <section>
+                <h2>Quick Start</h2>
+                <h3>CDN Streaming ClassLoader</h3>
+                <div class="code-block">try (CdnJarzClassLoader loader = new CdnJarzClassLoader("https://cdn.jarz-streaming.net/app.jarz")) {
+    Class&lt;?&gt; clazz = loader.loadClass("com.example.MyClass");
+    // Use class...
+}</div>
+
+                <h3>Create JARZ Archive</h3>
+                <div class="code-block">java -jar jarz-cli.jar -cf app.jarz -C classes/ .</div>
+
+                <h3>Upload to CDN</h3>
+                <div class="code-block">aws s3 cp app.jarz s3://jarz-distribution-1768174356/</div>
+            </section>
+
+            <section>
+                <h2>Use Cases</h2>
+                <ul style="margin: 1rem 0; padding-left: 2rem;">
+                    <li><strong>Container Platforms:</strong> 80% faster startup, 90% smaller deployments</li>
+                    <li><strong>Microservices:</strong> Shared libraries with 95% deduplication</li>
+                    <li><strong>Multi-Cloud:</strong> 99% bandwidth reduction with edge caching</li>
+                    <li><strong>Auto-Scaling:</strong> Instant class loading without image pulls</li>
+                </ul>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Plasticity.Cloud | JARZ Streaming CDN | Powered by AWS CloudFront</p>
+        </div>
+    </footer>
+</body>
+</html>

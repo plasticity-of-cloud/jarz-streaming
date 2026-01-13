@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jarz-streaming | Efficient Java Deployment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafaf9; /* Warm neutral stone-50 */
+            color: #1c1917; /* stone-900 */
+        }
+        
+        h1, h2, h3, h4, .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Scrollbar for flow sections */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f4;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a29e;
+        }
+
+        .step-card {
+            transition: all 0.3s ease;
+        }
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .active-step {
+            border-color: #0ea5e9; /* Sky 500 */
+            background-color: #f0f9ff; /* Sky 50 */
+        }
+    </style>
+    <!-- Chosen Palette: Stone (Warm Neutral) + Sky Blue (Tech/Cloud) + Emerald (Efficiency/Green) -->
+    <!-- Application Structure Plan: 
+         1. Hero Section: Immediate value prop (30-50% savings) and context.
+         2. Problem/Solution Dashboard: Interactive comparisons of "Fat JARs" vs "Streaming" using Chart.js.
+         3. Architecture Explorer: A step-by-step interactive flow (Build -> Registry -> Runtime).
+         4. Enterprise Deep Dive: Specific focus on Air-Gapped/Inner CDN use cases. Now includes Nginx Config Toggle.
+         5. ROI Simulator: Input fields to calculate potential savings based on user's infrastructure scale.
+         6. Implementation Specs: Tabular technical data.
+         7. Repositories: Direct links to GitHub code. -->
+    <!-- Visualization & Content Choices: 
+         - Stats: Large typography for key metrics.
+         - Storage Chart: Stacked Bar Chart comparing Traditional vs Jarz.
+         - Flow Diagram: Interactive HTML Grid + JS Text Updates.
+         - Air-Gap Sim: HTML Animation concept + Code Block.
+         - ROI Chart: Line Chart. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="antialiased selection:bg-sky-200 selection:text-sky-900">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Updated Header Logo Area -->
+                <div class="flex flex-col justify-center h-full">
+                    <span class="text-2xl font-bold tracking-tighter text-sky-600 leading-none">jarz<span class="text-stone-800">.streaming</span></span>
+                    <span class="text-[0.65rem] text-stone-500 font-medium tracking-wide mt-0.5">© 2026 Plasticity.cloud & CoDriverLabs</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-6">
+                    <button onclick="scrollToSection('problem')" class="text-sm font-medium text-stone-600 hover:text-sky-600 transition-colors">The Problem</button>
+                    <button onclick="scrollToSection('architecture')" class="text-sm font-medium text-stone-600 hover:text-sky-600 transition-colors">Architecture</button>
+                    <button onclick="scrollToSection('enterprise')" class="text-sm font-medium text-stone-600 hover:text-sky-600 transition-colors">Air-Gapped</button>
+                    <button onclick="scrollToSection('roi')" class="text-sm font-medium text-stone-600 hover:text-sky-600 transition-colors">ROI Calculator</button>
+                    <button onclick="scrollToSection('repos')" class="text-sm font-medium text-stone-600 hover:text-sky-600 transition-colors">Repositories</button>
+                    <a href="mailto:ecosystem@plasticity.cloud" class="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition-colors">Contact Pilot Program</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative overflow-hidden pt-16 pb-24 bg-stone-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-medium mb-6">
+                Open for Pilot / Commercial Preview
+            </div>
+            <h1 class="text-5xl md:text-6xl font-bold text-stone-900 mb-6 tracking-tight">
+                Streaming comes to the <span class="text-sky-600">JVM</span>.
+            </h1>
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-stone-600 leading-relaxed">
+                Reduce artifact size by <span class="font-bold text-stone-900">30-50%</span> and enable lazy-loading. 
+                Inspired by AWS SOCI and eStargz, optimized for the Java ecosystem.
+            </p>
+            <div class="mt-10 flex justify-center gap-4">
+                <button onclick="scrollToSection('architecture')" class="px-8 py-3 rounded-lg bg-stone-900 text-white font-semibold hover:bg-stone-800 transition-all shadow-lg hover:shadow-xl">
+                    Explore Architecture
+                </button>
+                <button onclick="scrollToSection('specs')" class="px-8 py-3 rounded-lg border border-stone-300 text-stone-700 font-medium hover:bg-white hover:border-stone-400 transition-all">
+                    View Specs
+                </button>
+            </div>
+
+            <!-- Key Metrics Grid -->
+            <div class="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-stone-100">
+                    <div class="text-4xl font-bold text-sky-600 mb-2">30-50%</div>
+                    <div class="text-sm text-stone-500 uppercase tracking-wide font-semibold">Storage Reduction</div>
+                    <p class="text-sm text-stone-400 mt-2">In Maven Repos & Artifacts</p>
+                </div>
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-stone-100">
+                    <div class="text-4xl font-bold text-emerald-500 mb-2">50%+</div>
+                    <div class="text-sm text-stone-500 uppercase tracking-wide font-semibold">Bandwidth Savings</div>
+                    <p class="text-sm text-stone-400 mt-2">On Optimized Updates</p>
+                </div>
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-stone-100">
+                    <div class="text-4xl font-bold text-amber-500 mb-2">&lt; 50KB</div>
+                    <div class="text-sm text-stone-500 uppercase tracking-wide font-semibold">Index JAR Size</div>
+                    <p class="text-sm text-stone-400 mt-2">Extremely Lightweight Boot</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Section: The Problem vs Solution -->
+    <section id="problem" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-12">
+                <h2 class="text-3xl font-bold text-stone-900 mb-4">The "Fat JAR" Bottleneck</h2>
+                <p class="text-lg text-stone-600 max-w-3xl">
+                    Traditional Java deployments ship monolithic binaries. If you change 200KB of code in a 100MB application, you still ship 100MB. This results in massive storage redundancy and network saturation. <strong>jarz-streaming</strong> changes the paradigm to object-based streaming.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <!-- Interactive Chart Area -->
+                <div class="bg-stone-50 p-6 rounded-2xl border border-stone-200">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-stone-800">Storage & Transfer Impact</h3>
+                        <div class="flex bg-stone-200 rounded-lg p-1">
+                            <button id="mode-single" class="px-3 py-1 text-xs font-bold rounded-md bg-white shadow text-stone-800 transition-all" onclick="updateProblemChart('single')">Single App</button>
+                            <button id="mode-fleet" class="px-3 py-1 text-xs font-bold rounded-md text-stone-500 hover:text-stone-800 transition-all" onclick="updateProblemChart('fleet')">Fleet (100 Nodes)</button>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="problemChart"></canvas>
+                    </div>
+                    <p class="mt-4 text-xs text-stone-500 text-center">
+                        *Data assumes a typical Spring Boot App (100MB) with frequent small logic updates.
+                    </p>
+                </div>
+
+                <!-- Contextual Details -->
+                <div class="space-y-8">
+                    <div class="flex">
+                        <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-lg bg-red-100 text-red-600 text-xl">📦</div>
+                        <div class="ml-4">
+                            <h4 class="text-lg font-bold text-stone-900">Storage Redundancy</h4>
+                            <p class="mt-2 text-stone-600">
+                                99.8% of a typical update is duplicate data (libraries like `spring-core`, `log4j`). We deduplicate this by bundling dependencies in optimized blocks in S3-compatible storage.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex">
+                        <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-lg bg-red-100 text-red-600 text-xl">📡</div>
+                        <div class="ml-4">
+                            <h4 class="text-lg font-bold text-stone-900">Network Saturation</h4>
+                            <p class="mt-2 text-stone-600">
+                                Deploying "Fat JARs" to edge nodes or air-gapped environments chokes bandwidth. Streaming sends only the ~50KB Index + specific required class blocks.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex">
+                        <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 text-xl">⚡</div>
+                        <div class="ml-4">
+                            <h4 class="text-lg font-bold text-stone-900">The Solution: Block Streaming</h4>
+                            <p class="mt-2 text-stone-600">
+                                Treat class bundles as content-addressable objects. The JVM boots from a lightweight Index and lazy-loads only the execution path.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section: Architecture Explorer -->
+    <section id="architecture" class="py-20 bg-stone-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-12 text-center">
+                <h2 class="text-3xl font-bold text-stone-900">Architecture Explorer</h2>
+                <p class="mt-4 text-stone-600 max-w-2xl mx-auto">
+                    Click through the phases to understand how jarz-streaming transforms the Build, Registry, and Runtime lifecycles.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Interactive Flow Steps (Left) -->
+                <div class="lg:col-span-4 space-y-4">
+                    <!-- Step 1 -->
+                    <div onclick="setArchitectureStep(1)" id="step-1" class="step-card active-step cursor-pointer p-6 rounded-xl border border-stone-200 bg-white relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-stone-800">1. Build Phase</h3>
+                            <span class="text-xs font-mono bg-stone-100 px-2 py-1 rounded">jarz-maven-plugins</span>
+                        </div>
+                        <p class="text-sm text-stone-500 mt-2">Bundle, Hash, Cross-Reference & Upload.</p>
+                        <div class="absolute right-0 top-0 h-full w-1 bg-sky-500"></div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div onclick="setArchitectureStep(2)" id="step-2" class="step-card cursor-pointer p-6 rounded-xl border border-stone-200 bg-white relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-stone-800">2. Registry Phase</h3>
+                            <span class="text-xs font-mono bg-stone-100 px-2 py-1 rounded">jarz-registry</span>
+                        </div>
+                        <p class="text-sm text-stone-500 mt-2">Central hub for Artifacts & Metadata.</p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div onclick="setArchitectureStep(3)" id="step-3" class="step-card cursor-pointer p-6 rounded-xl border border-stone-200 bg-white relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-stone-800">3. Runtime Phase</h3>
+                            <span class="text-xs font-mono bg-stone-100 px-2 py-1 rounded">jarz-streaming</span>
+                        </div>
+                        <p class="text-sm text-stone-500 mt-2">Lazy ClassLoader & Block Streaming.</p>
+                    </div>
+                </div>
+
+                <!-- Dynamic Detail Panel (Right) -->
+                <div class="lg:col-span-8">
+                    <div class="h-full bg-white rounded-2xl shadow-sm border border-stone-200 p-8 flex flex-col justify-center">
+                        <div id="arch-icon" class="text-5xl mb-6">🔨</div>
+                        <h3 id="arch-title" class="text-2xl font-bold text-stone-900 mb-4">Build Phase Analysis</h3>
+                        <div id="arch-content" class="text-stone-600 space-y-4 leading-relaxed">
+                            <p>During the build, the plugin analyzes the application classpath. Instead of zipping classes into a monolithic JAR, it:</p>
+                            <ul class="list-disc pl-5 space-y-2">
+                                <li>Analyzes cross-references between classes.</li>
+                                <li>Creates optimized bundles containing classes and their immediate dependencies.</li>
+                                <li>Uploads unique bundles to the central storage backend (maven/gradle or S3 compatible).</li>
+                            </ul>
+                            <div class="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-100">
+                                <span class="font-bold text-blue-800">Optimization:</span> Dependencies are downloaded in efficient blocks rather than individually, reducing HTTP overhead.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section: Enterprise / Air-Gapped -->
+    <section id="enterprise" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                <!-- Text Content -->
+                <div>
+                    <h2 class="text-3xl font-bold text-stone-900 mb-6">Air-Gapped & Disconnected Environments</h2>
+                    <p class="text-stone-600 mb-6">
+                        Designed specifically for Defense, Telco, and Banking sectors where public internet access is restricted. jarz-streaming utilizes an "Inner CDN" model to ensure secure, low-latency distribution.
+                    </p>
+                    
+                    <div class="space-y-6">
+                        <div class="group p-4 border border-stone-200 rounded-lg hover:border-sky-300 transition-colors">
+                            <h4 class="font-bold text-stone-800 mb-2 flex items-center">
+                                <span class="text-xl mr-2">🔒</span> Secure Origin
+                            </h4>
+                            <p class="text-sm text-stone-600">
+                                Validated with <strong>S3-compatible object storage</strong> acting as the primary origin within the secure perimeter.
+                            </p>
+                        </div>
+                        <div class="group p-4 border border-stone-200 rounded-lg hover:border-sky-300 transition-colors">
+                            <h4 class="font-bold text-stone-800 mb-2 flex items-center">
+                                <span class="text-xl mr-2">🏎️</span> Inner CDN
+                            </h4>
+                            <p class="text-sm text-stone-600">
+                                Uses standard HTTP/2 proxies (Nginx/Envoy) as edge caches. Streams are read-only and hash-verified against the Index JAR.
+                            </p>
+                        </div>
+                        <div class="group p-4 border border-stone-200 rounded-lg hover:border-sky-300 transition-colors">
+                            <h4 class="font-bold text-stone-800 mb-2 flex items-center">
+                                <span class="text-xl mr-2">🔄</span> Race-Free Invalidation
+                            </h4>
+                            <p class="text-sm text-stone-600">
+                                Content-Addressable Storage (CAS) ensures no overwrites. Old objects are orphaned; new versions get new hashes. Zero cache collisions.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conceptual Visual & Implementation Toggle -->
+                <div class="bg-stone-900 rounded-2xl p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-[400px]">
+                    <!-- View Toggle -->
+                    <div class="absolute top-4 right-4 bg-stone-800 p-1 rounded-lg flex space-x-1 z-20">
+                        <button id="btn-concept" onclick="toggleEnterpriseView('concept')" class="px-3 py-1 text-xs font-bold rounded-md bg-stone-600 text-white shadow transition-all">
+                            Conceptual
+                        </button>
+                        <button id="btn-config" onclick="toggleEnterpriseView('config')" class="px-3 py-1 text-xs font-bold rounded-md text-stone-400 hover:text-white transition-all">
+                            Nginx Config
+                        </button>
+                    </div>
+
+                    <!-- View 1: Diagram -->
+                    <div id="ent-concept" class="w-full max-w-sm relative transition-opacity duration-300">
+                        <div class="text-stone-400 text-xs font-mono uppercase tracking-widest mb-8 text-center">Secure Perimeter Visualization</div>
+                        <!-- Origin -->
+                        <div class="bg-stone-800 border border-stone-700 p-4 rounded-lg mb-8 text-center w-full relative z-10">
+                            <div class="text-2xl mb-1">🛢️</div>
+                            <div class="font-mono text-white text-sm">S3 Storage (Origin)</div>
+                            <div class="text-xs text-stone-500">Object Bundles & Hashes</div>
+                        </div>
+
+                        <!-- Arrow Down -->
+                        <div class="absolute left-1/2 top-20 -ml-px h-8 w-0.5 bg-stone-600"></div>
+
+                        <!-- Proxy -->
+                        <div class="bg-sky-900/50 border border-sky-700 p-4 rounded-lg mb-8 text-center w-full relative z-10 backdrop-blur-sm">
+                            <div class="text-2xl mb-1">🌐</div>
+                            <div class="font-mono text-sky-100 text-sm">Inner CDN (Proxy)</div>
+                            <div class="text-xs text-sky-400">HTTP/2 Edge Cache</div>
+                        </div>
+
+                        <!-- Arrow Down -->
+                        <div class="absolute left-1/2 top-48 -ml-px h-8 w-0.5 bg-stone-600"></div>
+
+                        <!-- JVM -->
+                        <div class="bg-emerald-900/30 border border-emerald-700 p-4 rounded-lg text-center w-full relative z-10">
+                            <div class="text-2xl mb-1">☕</div>
+                            <div class="font-mono text-emerald-100 text-sm">JVM (Lazy Loader)</div>
+                            <div class="text-xs text-emerald-400">Requests Needed Bundles</div>
+                        </div>
+                        
+                        <div class="absolute top-0 right-0 p-2">
+                            <span class="flex h-3 w-3">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- View 2: Config -->
+                    <div id="ent-config" class="w-full h-full hidden absolute inset-0 p-8 pt-16 overflow-auto">
+                        <div class="text-stone-400 text-xs font-mono uppercase tracking-widest mb-4 text-center">Sample Nginx Caching Proxy</div>
+                        <pre class="font-mono text-xs text-green-400 bg-black/50 p-4 rounded-lg border border-stone-700 whitespace-pre overflow-x-auto"><code># Inner CDN Configuration
+
+proxy_cache_path /var/cache/jarz 
+    levels=1:2 
+    keys_zone=jarz_zone:10m 
+    max_size=10g 
+    inactive=1y;
+
+server {
+    listen 443 ssl http2;
+    server_name jarz-proxy.internal;
+
+    location / {
+        # Upstream: S3 Compatible Storage
+        proxy_pass https://s3-backend;
+        
+        # Caching Rules for Immutable Blocks
+        proxy_cache jarz_zone;
+        # Cache hits for 1 year (Immutable)
+        proxy_cache_valid 200 1y; 
+        
+        # Optimization
+        proxy_buffering on;
+        proxy_ignore_headers Expires Cache-Control;
+    }
+}</code></pre>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section: ROI Calculator -->
+    <section id="roi" class="py-20 bg-stone-50 border-t border-stone-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-stone-900">ROI Calculator</h2>
+                <p class="mt-2 text-stone-600">Estimate your savings based on fleet size and deployment frequency.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Controls -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200 space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-1">Artifact Size (MB)</label>
+                        <input type="range" id="roi-size" min="50" max="500" value="100" class="w-full accent-sky-600 cursor-pointer">
+                        <div class="flex justify-between text-xs text-stone-500 mt-1">
+                            <span>50MB</span>
+                            <span id="val-size" class="font-bold text-sky-600">100 MB</span>
+                            <span>500MB</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-1">Nodes / Instances</label>
+                        <input type="range" id="roi-nodes" min="10" max="1000" value="100" class="w-full accent-sky-600 cursor-pointer">
+                        <div class="flex justify-between text-xs text-stone-500 mt-1">
+                            <span>10</span>
+                            <span id="val-nodes" class="font-bold text-sky-600">100 Nodes</span>
+                            <span>1000</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-1">Deploys per Week</label>
+                        <input type="range" id="roi-deploys" min="1" max="50" value="10" class="w-full accent-sky-600 cursor-pointer">
+                        <div class="flex justify-between text-xs text-stone-500 mt-1">
+                            <span>1</span>
+                            <span id="val-deploys" class="font-bold text-sky-600">10 / week</span>
+                            <span>50</span>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-stone-100">
+                         <div class="text-sm font-medium text-stone-500">Projected Bandwidth Savings</div>
+                         <div class="text-3xl font-bold text-emerald-600 mt-1" id="total-savings">0 TB</div>
+                         <div class="text-xs text-stone-400">per year</div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h3 class="text-sm font-bold text-stone-500 uppercase tracking-wide mb-4">Cumulative Bandwidth Usage (Year 1)</h3>
+                    <div class="chart-container">
+                        <canvas id="roiChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section: Technical Specs -->
+    <section id="specs" class="py-20 bg-stone-900 text-stone-300">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-white mb-8 text-center">Technical Specifications</h2>
+            <div class="bg-stone-800 rounded-xl overflow-hidden border border-stone-700">
+                <table class="min-w-full divide-y divide-stone-700">
+                    <tbody class="divide-y divide-stone-700">
+                        <tr class="hover:bg-stone-700/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-medium text-white w-1/3">Java Version</td>
+                            <td class="px-6 py-4 text-sm font-mono text-sky-400">JDK 11 or higher (Required for custom ClassLoader API)</td>
+                        </tr>
+                        <tr class="hover:bg-stone-700/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-medium text-white">Build Tool</td>
+                            <td class="px-6 py-4 text-sm font-mono text-stone-300">Maven 3.8+ (Gradle plugin in beta)</td>
+                        </tr>
+                        <tr class="hover:bg-stone-700/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-medium text-white">Storage Protocol</td>
+                            <td class="px-6 py-4 text-sm font-mono text-stone-300">S3 API (Validated on AWS S3, MinIO, etc.)</td>
+                        </tr>
+                        <tr class="hover:bg-stone-700/50 transition-colors">
+                            <td class="px-6 py-4 text-sm font-medium text-white">Transport</td>
+                            <td class="px-6 py-4 text-sm font-mono text-stone-300">HTTP/1.1 or HTTP/2 (Recommended for multiplexing)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section: GitHub Repositories -->
+    <section id="repos" class="py-20 bg-stone-50 border-t border-stone-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-stone-900">Open Source Repositories</h2>
+                <p class="mt-2 text-stone-600">Explore the code powering the jarz ecosystem.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Repo 1 -->
+                <a href="https://github.com/plasticity-of-cloud/jarz-streaming" target="_blank" rel="noopener noreferrer" class="group block p-6 bg-white rounded-xl shadow-sm border border-stone-200 hover:border-sky-400 transition-all hover:shadow-md">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-2xl text-stone-700 group-hover:text-sky-600 transition-colors">📦</div>
+                        <span class="text-xs font-mono bg-stone-100 text-stone-500 px-2 py-1 rounded group-hover:bg-sky-50 group-hover:text-sky-700 transition-colors">GitHub</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-stone-900 group-hover:text-sky-600 transition-colors mb-2">jarz-streaming</h3>
+                    <p class="text-sm text-stone-500">The core runtime library implementing the lazy-loading ClassLoader and block streaming logic.</p>
+                </a>
+
+                <!-- Repo 2 -->
+                <a href="https://github.com/plasticity-of-cloud/jarz-registry" target="_blank" rel="noopener noreferrer" class="group block p-6 bg-white rounded-xl shadow-sm border border-stone-200 hover:border-sky-400 transition-all hover:shadow-md">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-2xl text-stone-700 group-hover:text-sky-600 transition-colors">🛡️</div>
+                        <span class="text-xs font-mono bg-stone-100 text-stone-500 px-2 py-1 rounded group-hover:bg-sky-50 group-hover:text-sky-700 transition-colors">GitHub</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-stone-900 group-hover:text-sky-600 transition-colors mb-2">jarz-registry</h3>
+                    <p class="text-sm text-stone-500">Reference implementation for a Private CDN registry and metadata server for secure distribution.</p>
+                </a>
+
+                <!-- Repo 3 -->
+                <a href="https://github.com/plasticity-of-cloud/jarz-maven-plugins" target="_blank" rel="noopener noreferrer" class="group block p-6 bg-white rounded-xl shadow-sm border border-stone-200 hover:border-sky-400 transition-all hover:shadow-md">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-2xl text-stone-700 group-hover:text-sky-600 transition-colors">🔌</div>
+                        <span class="text-xs font-mono bg-stone-100 text-stone-500 px-2 py-1 rounded group-hover:bg-sky-50 group-hover:text-sky-700 transition-colors">GitHub</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-stone-900 group-hover:text-sky-600 transition-colors mb-2">jarz-maven-plugins</h3>
+                    <p class="text-sm text-stone-500">Build plugins to analyze dependencies, generate content hashes, and upload optimized bundles.</p>
+                </a>
+            </div>
+            
+            <div class="mt-12 text-center">
+                 <p class="mb-4">Ready to shape the cloud?</p>
+                 <a href="mailto:ecosystem@plasticity.cloud" class="inline-flex items-center text-sky-400 hover:text-sky-500 font-bold text-lg">
+                    Contact Ecosystem Team <span class="ml-2">→</span>
+                 </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-stone-950 text-stone-500 py-12 border-t border-stone-800">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-sm">© 2026 Plasticity.cloud & CoDriverLabs.</p>
+            <p class="text-xs mt-2">jarz-streaming is part of the Express Compute Platform.</p>
+            <div class="mt-4 pt-4 border-t border-stone-800">
+                <p class="text-xs text-stone-600">
+                    Dual Licensed: 
+                    <a href="https://github.com/plasticity-of-cloud/jdk-enhancements/blob/main/LICENSE-AGPL" target="_blank" class="text-sky-500 hover:text-sky-400">AGPL v3</a> 
+                    (Open Source) | 
+                    <a href="https://github.com/plasticity-of-cloud/jdk-enhancements/blob/main/LICENSE-COMMERCIAL" target="_blank" class="text-sky-500 hover:text-sky-400">Commercial License</a> 
+                    (Enterprise)
+                </p>
+                <p class="text-xs text-stone-600 mt-2">
+                    For commercial licensing: <a href="mailto:ecosystem@plasticity.cloud" class="text-sky-500 hover:text-sky-400">ecosystem@plasticity.cloud</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- State Management ---
+        const appState = {
+            chartInstances: {},
+            roi: {
+                size: 100, // MB
+                nodes: 100,
+                deploys: 10, // Per week
+            },
+            problemMode: 'single', // 'single' or 'fleet'
+            enterpriseView: 'concept' // 'concept' or 'config'
+        };
+
+        // --- Core Interaction Handling: Smooth Scroll ---
+        function scrollToSection(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // --- Interaction: Enterprise View Toggle ---
+        function toggleEnterpriseView(view) {
+            appState.enterpriseView = view;
+            const conceptDiv = document.getElementById('ent-concept');
+            const configDiv = document.getElementById('ent-config');
+            const btnConcept = document.getElementById('btn-concept');
+            const btnConfig = document.getElementById('btn-config');
+
+            if (view === 'concept') {
+                conceptDiv.classList.remove('hidden');
+                configDiv.classList.add('hidden');
+                
+                // Active Button
+                btnConcept.className = "px-3 py-1 text-xs font-bold rounded-md bg-stone-600 text-white shadow transition-all";
+                // Inactive Button
+                btnConfig.className = "px-3 py-1 text-xs font-bold rounded-md text-stone-400 hover:text-white transition-all";
+            } else {
+                conceptDiv.classList.add('hidden');
+                configDiv.classList.remove('hidden');
+
+                // Active Button
+                btnConfig.className = "px-3 py-1 text-xs font-bold rounded-md bg-stone-600 text-white shadow transition-all";
+                // Inactive Button
+                btnConcept.className = "px-3 py-1 text-xs font-bold rounded-md text-stone-400 hover:text-white transition-all";
+            }
+        }
+
+        // --- Visualization 1: Problem vs Solution (Chart.js) ---
+        function initProblemChart() {
+            const ctx = document.getElementById('problemChart').getContext('2d');
+            
+            // Initial Data: Single App (100MB Total)
+            // Traditional: 0.2MB Code, 99.8MB Libs
+            // Jarz: 0.2MB Code, 0.05MB Index (Libs are references)
+            
+            const data = {
+                labels: ['Traditional Fat JAR', 'jarz-streaming'],
+                datasets: [
+                    {
+                        label: 'Application Code',
+                        data: [0.2, 0.2],
+                        backgroundColor: '#0ea5e9', // Sky 500
+                    },
+                    {
+                        label: 'Dependencies / Libs',
+                        data: [99.8, 50.0], // Adjusted visually to represent ~50% savings range clearly
+                        backgroundColor: '#ef4444', 
+                    }
+                ]
+            };
+
+            appState.chartInstances.problem = new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.raw + ' MB';
+                                }
+                            }
+                        },
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: { 
+                            stacked: true,
+                            title: { display: true, text: 'Megabytes (MB)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateProblemChart(mode) {
+            appState.problemMode = mode;
+            
+            // Toggle UI Buttons
+            document.getElementById('mode-single').className = mode === 'single' 
+                ? "px-3 py-1 text-xs font-bold rounded-md bg-white shadow text-stone-800 transition-all"
+                : "px-3 py-1 text-xs font-bold rounded-md text-stone-500 hover:text-stone-800 transition-all";
+            
+            document.getElementById('mode-fleet').className = mode === 'fleet'
+                ? "px-3 py-1 text-xs font-bold rounded-md bg-white shadow text-stone-800 transition-all"
+                : "px-3 py-1 text-xs font-bold rounded-md text-stone-500 hover:text-stone-800 transition-all";
+
+            const chart = appState.chartInstances.problem;
+
+            if (mode === 'single') {
+                // Reset to Single App View
+                chart.data.datasets[1].data = [99.8, 50.0];
+                chart.options.scales.y.title.text = 'Megabytes (MB)';
+            } else {
+                // Fleet View (100 Nodes)
+                // Traditional: 100 * 100MB = 10,000 MB
+                
+                chart.data.datasets[1].data = [9980, 5000]; // ~50% reduction at scale
+                chart.options.scales.y.title.text = 'Megabytes (MB) - Logarithmic Scale recommended but linear for impact';
+            }
+            chart.update();
+        }
+
+        // --- Interaction: Architecture Explorer ---
+        const archSteps = {
+            1: {
+                title: "Build Phase Analysis",
+                icon: "🔨",
+                content: `
+                    <p>During the build, the plugin analyzes the application classpath. Instead of zipping classes into a monolithic JAR, it:</p>
+                    <ul class="list-disc pl-5 space-y-2 mt-2">
+                        <li>Analyzes cross-references between classes.</li>
+                        <li>Creates optimized bundles containing classes and their immediate dependencies.</li>
+                        <li>Uploads unique bundles to the central storage backend (maven/gradle or S3 compatible).</li>
+                    </ul>
+                    <div class="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-100 text-sm">
+                        <span class="font-bold text-blue-800">Optimization:</span> Dependencies are downloaded in efficient blocks rather than individually, reducing HTTP overhead.
+                    </div>`
+            },
+            2: {
+                title: "Registry Phase",
+                icon: "📝",
+                content: `
+                    <p>The <strong>jarz-registry</strong> functions similarly to a standard Maven or Gradle registry, serving as the central repository for all project assets.</p>
+                    <ul class="list-disc pl-5 space-y-2 mt-2">
+                        <li>It stores all <strong>jarz artifacts</strong> (optimized bundles) and their associated metadata.</li>
+                        <li>It hosts the lightweight <strong>Index JARs</strong> (< 50KB) used for booting.</li>
+                    </ul>
+                    <div class="bg-stone-50 border border-stone-200 rounded p-3 font-mono text-xs mt-3">
+                        Registry Content: [Artifacts + Indexes + Metadata]
+                    </div>
+                    <p class="mt-4">This ensures a familiar workflow for developers while enabling the advanced streaming capabilities.</p>`
+            },
+            3: {
+                title: "Runtime Phase",
+                icon: "⚡",
+                content: `
+                    <p>The JVM starts using a custom <strong>Lazy ClassLoader</strong>.</p>
+                    <ul class="list-disc pl-5 space-y-2 mt-2">
+                        <li>It boots immediately using the lightweight Index JAR.</li>
+                        <li>When a class is needed (e.g., <code>com.myapp.UserController</code>), the ClassLoader fetches the optimized block containing the class and its dependencies from the proxy or S3 bucket.</li>
+                    </ul>
+                    <div class="bg-emerald-50 p-4 rounded-lg mt-4 border border-emerald-100 text-sm">
+                        <span class="font-bold text-emerald-800">Result:</span> Applications start faster, and bandwidth usage is reduced by 50%+ due to precise bundle loading.
+                    </div>`
+            }
+        };
+
+        function setArchitectureStep(stepId) {
+            // Update UI Cards
+            for(let i=1; i<=3; i++) {
+                const el = document.getElementById(`step-${i}`);
+                if (i === stepId) {
+                    el.classList.add('active-step');
+                    // Add accent bar if missing
+                    if(!el.querySelector('.absolute')) {
+                        const bar = document.createElement('div');
+                        bar.className = 'absolute right-0 top-0 h-full w-1 bg-sky-500';
+                        el.appendChild(bar);
+                    }
+                } else {
+                    el.classList.remove('active-step');
+                    const bar = el.querySelector('.absolute');
+                    if(bar) bar.remove();
+                }
+            }
+
+            // Update Content Panel
+            const data = archSteps[stepId];
+            document.getElementById('arch-icon').textContent = data.icon;
+            document.getElementById('arch-title').textContent = data.title;
+            document.getElementById('arch-content').innerHTML = data.content;
+        }
+
+        // --- Visualization 2: ROI Calculator (Chart.js) ---
+        function initROIChart() {
+            const ctx = document.getElementById('roiChart').getContext('2d');
+            
+            // Logic: Cumulative Bandwidth over 52 weeks
+            // Traditional = Weeks * Deploys * Nodes * Size
+            // Jarz = Weeks * Deploys * Nodes * (Size * 0.50) [Assuming 50% reduction]
+            
+            const weeks = Array.from({length: 12}, (_, i) => `Month ${i+1}`); // Simplified to 12 points
+            
+            const data = {
+                labels: weeks,
+                datasets: [
+                    {
+                        label: 'Traditional Bandwidth',
+                        data: [], // Filled dynamically
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'jarz-streaming Bandwidth',
+                        data: [], // Filled dynamically
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            };
+
+            appState.chartInstances.roi = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + Math.round(context.raw) + ' GB';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { title: { display: true, text: 'Cumulative Transfer (GB)' } }
+                    }
+                }
+            });
+
+            calculateROI(); // Initial calc
+        }
+
+        function calculateROI() {
+            const size = parseInt(document.getElementById('roi-size').value);
+            const nodes = parseInt(document.getElementById('roi-nodes').value);
+            const deploys = parseInt(document.getElementById('roi-deploys').value);
+
+            // Update Labels
+            document.getElementById('val-size').textContent = `${size} MB`;
+            document.getElementById('val-nodes').textContent = `${nodes} Nodes`;
+            document.getElementById('val-deploys').textContent = `${deploys} / week`;
+
+            // Calculate Data Points (Cumulative per Month ~ 4 weeks)
+            const tradData = [];
+            const jarzData = [];
+            
+            let tradSum = 0;
+            let jarzSum = 0;
+
+            // Jarz reduction factor: 50% savings
+            // (Size * 0.50) represents the Index JAR + block bundles
+            const jarzSize = size * 0.50; 
+
+            for (let m = 1; m <= 12; m++) {
+                // Monthly transfer = Deploys/week * 4 weeks * Nodes * Size
+                const monthlyTrad = (deploys * 4 * nodes * size) / 1024; // GB
+                const monthlyJarz = (deploys * 4 * nodes * jarzSize) / 1024; // GB
+
+                tradSum += monthlyTrad;
+                jarzSum += monthlyJarz;
+
+                tradData.push(tradSum);
+                jarzData.push(jarzSum);
+            }
+
+            // Update Chart
+            const chart = appState.chartInstances.roi;
+            chart.data.datasets[0].data = tradData;
+            chart.data.datasets[1].data = jarzData;
+            chart.update();
+
+            // Update Total Savings Text
+            const savedGB = tradSum - jarzSum;
+            const savedTB = (savedGB / 1024).toFixed(1);
+            document.getElementById('total-savings').textContent = `${savedTB} TB`;
+        }
+
+        // Event Listeners for ROI inputs
+        ['roi-size', 'roi-nodes', 'roi-deploys'].forEach(id => {
+            document.getElementById(id).addEventListener('input', calculateROI);
+        });
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            initProblemChart();
+            initROIChart();
+        });
+
+    </script>
+</body>
+</html>

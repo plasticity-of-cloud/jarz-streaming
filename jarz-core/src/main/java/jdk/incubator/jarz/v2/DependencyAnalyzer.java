@@ -22,29 +22,116 @@ public class DependencyAnalyzer {
      * Analyze dependencies in a JAR or directory.
      */
     public DependencyGraph analyze(Path input) throws IOException {
-        var tool = ToolProvider.findFirst("jdeps")
-            .orElseThrow(() -> new IOException("jdeps tool not found"));
-        
-        var out = new StringWriter();
-        var err = new StringWriter();
-        
-        int result = tool.run(
-            new PrintWriter(out), 
-            new PrintWriter(err),
-            "-verbose:class",
-            "-filter:none",
-            input.toString()
-        );
-        
-        if (result != 0) {
-            // jdeps may return non-zero for warnings, try to parse anyway
-            String errStr = err.toString();
-            if (!errStr.isEmpty() && !errStr.contains("Warning")) {
-                throw new IOException("jdeps failed: " + errStr);
+        return analyze(input, null);
+    }
+    
+    /**
+     * Analyze dependencies in a JAR or directory with optional classpath.
+     */
+    public DependencyGraph analyze(Path input, String classpath) throws IOException {
+        try {
+            var tool = ToolProvider.findFirst("jdeps")
+                .orElseThrow(() -> new IOException("jdeps tool not found"));
+            
+            var out = new StringWriter();
+            var err = new StringWriter();
+            
+            List<String> args = new ArrayList<>();
+            args.add("-verbose:class");
+            args.add("-filter:none");
+            
+            if (classpath != null && !classpath.isEmpty()) {
+                // Check if we have modular JARs that need module-path
+                List<Path> classpathJars = parseClasspath(classpath);
+                List<Path> modularJars = new ArrayList<>();
+                List<Path> nonModularJars = new ArrayList<>();
+                
+                for (Path jar : classpathJars) {
+                    if (isModularJar(jar)) {
+                        modularJars.add(jar);
+                    } else {
+                        nonModularJars.add(jar);
+                    }
+                }
+                
+                // Use module-path for modular JARs
+                if (!modularJars.isEmpty()) {
+                    args.add("--module-path");
+                    args.add(modularJars.stream()
+                        .map(Path::toString)
+                        .collect(Collectors.joining(File.pathSeparator)));
+                }
+                
+                // Use class-path for non-modular JARs
+                if (!nonModularJars.isEmpty()) {
+                    args.add("-cp");
+                    args.add(nonModularJars.stream()
+                        .map(Path::toString)
+                        .collect(Collectors.joining(File.pathSeparator)));
+                }
             }
+            
+            args.add(input.toString());
+            
+            int result = tool.run(
+                new PrintWriter(out), 
+                new PrintWriter(err),
+                args.toArray(new String[0])
+            );
+            
+            if (result != 0) {
+                // jdeps may return non-zero for warnings, try to parse anyway
+                String errStr = err.toString();
+                if (!errStr.isEmpty() && !errStr.contains("Warning")) {
+                    // If classpath was provided and failed, try without classpath
+                    if (classpath != null && !classpath.isEmpty()) {
+                        return analyze(input, null);
+                    }
+                    throw new IOException("jdeps failed: " + errStr);
+                }
+            }
+            
+            return parseOutput(out.toString());
+            
+        } catch (RuntimeException | IOException e) {
+            // If classpath was provided and failed, try without classpath
+            if (classpath != null && !classpath.isEmpty()) {
+                return analyzeWithoutClasspath(input);
+            }
+            // If no classpath or fallback also failed, use class file analysis
+            return analyzeClassFiles(input.getParent() != null ? input.getParent() : input);
         }
-        
-        return parseOutput(out.toString());
+    }
+    
+    private DependencyGraph analyzeWithoutClasspath(Path input) throws IOException {
+        try {
+            var tool = ToolProvider.findFirst("jdeps")
+                .orElseThrow(() -> new IOException("jdeps tool not found"));
+            
+            var out = new StringWriter();
+            var err = new StringWriter();
+            
+            int result = tool.run(
+                new PrintWriter(out), 
+                new PrintWriter(err),
+                "-verbose:class",
+                "-filter:none",
+                input.toString()
+            );
+            
+            if (result != 0) {
+                String errStr = err.toString();
+                if (!errStr.isEmpty() && !errStr.contains("Warning")) {
+                    throw new IOException("jdeps failed: " + errStr);
+                }
+            }
+            
+            return parseOutput(out.toString());
+            
+        } catch (Exception e) {
+            // Final fallback to class file analysis
+            return analyzeClassFiles(input.getParent() != null ? input.getParent() : input);
+        }
     }
     
     /**
@@ -192,5 +279,37 @@ public class DependencyAnalyzer {
         Path relative = base.relativize(classFile);
         String name = relative.toString();
         return name.substring(0, name.length() - 6).replace(File.separatorChar, '/');
+    }
+    
+    /**
+     * Check if a JAR file is modular (contains module-info.class).
+     */
+    private boolean isModularJar(Path jarPath) throws IOException {
+        if (!Files.exists(jarPath) || !jarPath.toString().endsWith(".jar")) {
+            return false;
+        }
+        
+        try (JarFile jar = new JarFile(jarPath.toFile())) {
+            // Check for module-info.class in root
+            if (jar.getEntry("module-info.class") != null) {
+                return true;
+            }
+            
+            // Check for module-info.class in versioned entries (Multi-Release JARs)
+            return jar.stream().anyMatch(entry -> 
+                entry.getName().matches("META-INF/versions/\\d+/module-info\\.class"));
+        }
+    }
+    
+    /**
+     * Parse classpath string into individual JAR paths.
+     */
+    private List<Path> parseClasspath(String classpath) {
+        return Arrays.stream(classpath.split(File.pathSeparator))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .map(Paths::get)
+            .filter(Files::exists)
+            .collect(Collectors.toList());
     }
 }

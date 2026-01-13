@@ -86,6 +86,10 @@ public class JarToJarzConverter {
                     if (entry.getName().endsWith(".class")) {
                         classFiles.put(entry.getName(), content);
                     } else {
+                        // Process manifest files to update Class-Path entries
+                        if (ManifestProcessor.isManifestFile(entry.getName())) {
+                            content = ManifestProcessor.processManifest(content);
+                        }
                         resourceFiles.put(entry.getName(), content);
                     }
                 }

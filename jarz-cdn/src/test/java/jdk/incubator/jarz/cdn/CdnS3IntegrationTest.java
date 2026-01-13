@@ -30,6 +30,7 @@ import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -39,9 +40,6 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -75,6 +73,7 @@ class CdnS3IntegrationTest {
     private static String bucketName = "jarz-test-bucket";
     private static String jarzKey = "log4j-api-2.20.0.jarz";
     private static int cdnPort;
+    private static volatile long totalBytesServed = 0; // Track bandwidth usage
 
     @BeforeAll
     static void setUpInfrastructure() throws Exception {
@@ -89,6 +88,13 @@ class CdnS3IntegrationTest {
         
         // 3. Start Undertow HTTP/2 CDN (fetches from S3)
         startUndertowCdn();
+    }
+    
+    /**
+     * Get total bytes served by CDN for bandwidth efficiency analysis
+     */
+    private static long getTotalBytesServed() {
+        return totalBytesServed;
     }
 
     @AfterAll
@@ -226,6 +232,17 @@ class CdnS3IntegrationTest {
     void loadLog4j2ClassesViaCdnClassLoader() throws Exception {
         String cdnUrl = "https://localhost:" + cdnPort + "/" + jarzKey;
         
+        // Get original JARZ file size from S3 for comparison
+        HeadObjectResponse headResponse = s3Client.headObject(HeadObjectRequest.builder()
+                .bucket(bucketName)
+                .key(jarzKey)
+                .build());
+        long originalJarzSize = headResponse.contentLength();
+        System.out.printf("📊 Original JARZ file size: %,d bytes%n", originalJarzSize);
+        
+        // Reset CDN server bandwidth tracking
+        long initialBytesServed = getTotalBytesServed();
+        
         try (CdnJarzClassLoader loader = new CdnJarzClassLoader(cdnUrl)) {
             // Load real log4j2 classes
             Class<?> simpleLoggerClass = loader.loadClass("org.apache.logging.log4j.simple.SimpleLogger");
@@ -271,15 +288,39 @@ class CdnS3IntegrationTest {
             System.out.println("  - " + simpleLoggerClass.getName());
             System.out.println("  - " + logManagerClass.getName());
             System.out.println("  - " + levelClass.getName());
-            
-            // TODO: Implement cache statistics in unified architecture
-            // var stats = loader.getCacheStats();
-            // assertThat(stats.cachedBlocks()).isGreaterThanOrEqualTo(0);
-            // assertThat(stats.memoryUsage()).isGreaterThanOrEqualTo(0);
-            
-            // System.out.println("📊 Cache stats: " + stats.cachedBlocks() + " blocks, " + 
-            //                  stats.memoryUsage() + " bytes");
         }
+        
+        // Calculate bandwidth efficiency after ClassLoader is closed
+        long finalBytesServed = getTotalBytesServed();
+        long totalBytesDownloaded = finalBytesServed - initialBytesServed;
+        
+        // Validate streaming efficiency
+        System.out.printf("%n📊 Bandwidth Efficiency Analysis:%n");
+        System.out.printf("  Original JARZ size:     %,10d bytes%n", originalJarzSize);
+        System.out.printf("  Bytes downloaded:       %,10d bytes%n", totalBytesDownloaded);
+        System.out.printf("  Bandwidth saved:        %,10d bytes (%.1f%%)%n", 
+            originalJarzSize - totalBytesDownloaded,
+            (1.0 - (double)totalBytesDownloaded / originalJarzSize) * 100);
+        System.out.printf("  Streaming efficiency:   %.1fx less data%n", 
+            (double)originalJarzSize / totalBytesDownloaded);
+        
+        // Assertions for streaming efficiency
+        assertThat(totalBytesDownloaded)
+            .as("Should download significantly less than full JARZ file")
+            .isLessThan(originalJarzSize);
+            
+        assertThat(totalBytesDownloaded)
+            .as("Should download less than 80% of original file for 3 classes")
+            .isLessThan((long)(originalJarzSize * 0.8));
+            
+        System.out.println("✅ CDN streaming efficiency validated - only downloaded needed classes!");
+        
+        // TODO: Implement cache statistics in unified architecture
+        // var stats = loader.getCacheStats();
+        // assertThat(stats.cachedBlocks()).isGreaterThanOrEqualTo(0);
+        // assertThat(stats.memoryUsage()).isGreaterThanOrEqualTo(0);
+        // System.out.println("📊 Cache stats: " + stats.cachedBlocks() + " blocks, " + 
+        //                    stats.memoryUsage() + " bytes");
     }
 
     @Test
@@ -402,7 +443,7 @@ class CdnS3IntegrationTest {
             
             // Now test with CdnHybridJarzDataProvider using local index
             try (CdnHybridJarzDataProvider provider = new CdnHybridJarzDataProvider(cdnUrl, tempIndexPath);
-                 JarzClassLoader loader = new JarzClassLoader(provider)) {
+                 CdnJarzClassLoader loader = new CdnJarzClassLoader(cdnUrl, tempIndexPath)) {
                 
                 System.out.println("🔍 Testing CDN with local index optimization:");
                 System.out.println("  - Local index available: " + provider.hasLocalIndex());
@@ -559,6 +600,10 @@ class CdnS3IntegrationTest {
                     .put(Headers.CONTENT_RANGE, 
                          String.format("bytes %d-%d/%d", start, end, objectSize))
                     .put(Headers.CONTENT_LENGTH, data.length);
+            
+            // Track bandwidth usage
+            totalBytesServed += data.length;
+            
             exchange.getResponseSender().send(ByteBuffer.wrap(data));
         }
         
@@ -573,6 +618,10 @@ class CdnS3IntegrationTest {
             
             exchange.setStatusCode(200);
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, data.length);
+            
+            // Track bandwidth usage
+            totalBytesServed += data.length;
+            
             exchange.getResponseSender().send(ByteBuffer.wrap(data));
         }
     }

@@ -59,7 +59,7 @@ class JarzClassLoaderTest {
     @Test
     @DisplayName("JarzClassLoader should work without Main-Class")
     void testLibraryLoading() throws Exception {
-        try (JarzClassLoader loader = new JarzClassLoader(libraryJarzFile)) {
+        try (SimpleJarzClassLoader loader = new SimpleJarzClassLoader(libraryJarzFile)) {
             assertNotNull(loader.getManifest());
             // Should not throw - library loading doesn't require Main-Class
         }
@@ -77,7 +77,7 @@ class JarzClassLoaderTest {
         }
         
         // Should not throw - library loading allows missing manifest
-        try (JarzClassLoader loader = new JarzClassLoader(noManifestJarz)) {
+        try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(noManifestJarz)) {
             assertNotNull(loader.getManifest());
         }
     }
@@ -85,9 +85,9 @@ class JarzClassLoaderTest {
     @Test
     @DisplayName("JarzClassLoader toString should be meaningful")
     void testToString() throws Exception {
-        try (JarzClassLoader loader = new JarzClassLoader(libraryJarzFile)) {
+        try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(libraryJarzFile)) {
             String toString = loader.toString();
-            assertTrue(toString.contains("JarzClassLoader"));
+            assertTrue(toString.contains("JarzApplicationClassLoader"));
             assertTrue(toString.contains("closed=false"));
         }
     }

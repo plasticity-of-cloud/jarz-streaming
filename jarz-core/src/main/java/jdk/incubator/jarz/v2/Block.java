@@ -61,5 +61,19 @@ public final class Block {
         return result;
     }
     
-    public record ClassEntry(String className, byte[] classData, int offsetInBlock) {}
+    public static final class ClassEntry {
+        private final String className;
+        private final byte[] classData;
+        private final int offsetInBlock;
+        
+        public ClassEntry(String className, byte[] classData, int offsetInBlock) {
+            this.className = className;
+            this.classData = classData;
+            this.offsetInBlock = offsetInBlock;
+        }
+        
+        public String className() { return className; }
+        public byte[] classData() { return classData; }
+        public int offsetInBlock() { return offsetInBlock; }
+    }
 }

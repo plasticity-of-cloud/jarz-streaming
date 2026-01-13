@@ -66,9 +66,9 @@ public class ResourceBlockAssigner {
             blockId++;
         }
         
-        // NATIVE: Large files, one or few per block
+        // NATIVE: One native library per block for platform-specific streaming
         var nativeEntries = byType.getOrDefault(BlockType.NATIVE, List.of());
-        for (TypedBlock b : createBlocks(blockId, BlockType.NATIVE, nativeEntries, nativeBlockSize)) {
+        for (TypedBlock b : createNativeBlocks(blockId, nativeEntries)) {
             blocks.add(b);
             blockId++;
         }
@@ -90,6 +90,24 @@ public class ResourceBlockAssigner {
             block.add(e.getKey(), e.getValue());
         }
         return block;
+    }
+    
+    /**
+     * Create blocks for native libraries - one native library per block.
+     * This enables platform-specific streaming where clients only download
+     * the native libraries they need for their platform.
+     */
+    private List<TypedBlock> createNativeBlocks(int startId, List<Map.Entry<String, byte[]>> entries) {
+        if (entries.isEmpty()) return List.of();
+        
+        List<TypedBlock> blocks = new ArrayList<>();
+        for (int i = 0; i < entries.size(); i++) {
+            TypedBlock block = new TypedBlock(startId + i, BlockType.NATIVE);
+            var entry = entries.get(i);
+            block.add(entry.getKey(), entry.getValue());
+            blocks.add(block);
+        }
+        return blocks;
     }
     
     private List<TypedBlock> createBlocks(int startId, BlockType type,

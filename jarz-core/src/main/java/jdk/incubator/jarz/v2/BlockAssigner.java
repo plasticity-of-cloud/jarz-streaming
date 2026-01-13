@@ -3,6 +3,7 @@ package jdk.incubator.jarz.v2;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Assigns classes to blocks based on dependency analysis.
@@ -92,7 +93,7 @@ public class BlockAssigner {
             .filter(c -> !assigned.contains(c))
             .filter(classFiles::containsKey)
             .sorted(Comparator.comparingInt(c -> classFiles.get(c).length))
-            .toList();
+            .collect(Collectors.toList());
         
         for (String relatedClass : sortedRelated) {
             byte[] classData = classFiles.get(relatedClass);

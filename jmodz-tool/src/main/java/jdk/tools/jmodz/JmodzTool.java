@@ -35,7 +35,6 @@ public class JmodzTool {
             return "jmodz";
         }
 
-        @Override
         public Optional<String> description() {
             return Optional.of("Create and manipulate ZSTD-compressed JMOD files");
         }
