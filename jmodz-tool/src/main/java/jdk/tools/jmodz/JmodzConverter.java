@@ -5,6 +5,7 @@ import jdk.incubator.jarz.v2.BlockReader;
 import jdk.incubator.jarz.v2.Block;
 import java.io.*;
 import java.nio.file.*;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
@@ -30,7 +31,7 @@ public class JmodzConverter {
             try (ZipFile zipFile = new ZipFile(jmodFile.toFile());
                  BlockWriter writer = new BlockWriter(tempJarz)) {
                 
-                var entries = zipFile.stream().filter(entry -> !entry.isDirectory()).toList();
+                var entries = zipFile.stream().filter(entry -> !entry.isDirectory()).collect(Collectors.toList());
                 Block block = new Block(0);
                 
                 for (var entry : entries) {

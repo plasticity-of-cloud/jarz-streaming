@@ -1,0 +1,115 @@
+{
+  "CallerReference": "jarz-dist-1768174445",
+  "Aliases": {
+    "Quantity": 2,
+    "Items": ["jarz-streaming.net", "cdn.jarz-streaming.net"]
+  },
+  "DefaultRootObject": "index.html",
+  "Origins": {
+    "Quantity": 1,
+    "Items": [
+      {
+        "Id": "jarz-s3-origin",
+        "DomainName": "jarz-distribution-1768174356.s3.amazonaws.com",
+        "OriginPath": "",
+        "CustomHeaders": {"Quantity": 0},
+        "S3OriginConfig": {
+          "OriginAccessIdentity": "",
+          "OriginReadTimeout": 30
+        },
+        "ConnectionAttempts": 3,
+        "ConnectionTimeout": 10,
+        "OriginShield": {"Enabled": false},
+        "OriginAccessControlId": "E2BO51BFN5FY38"
+      }
+    ]
+  },
+  "OriginGroups": {"Quantity": 0},
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "jarz-s3-origin",
+    "TrustedSigners": {"Enabled": false, "Quantity": 0},
+    "TrustedKeyGroups": {"Enabled": false, "Quantity": 0},
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "AllowedMethods": {
+      "Quantity": 2,
+      "Items": ["HEAD", "GET"],
+      "CachedMethods": {"Quantity": 2, "Items": ["HEAD", "GET"]}
+    },
+    "SmoothStreaming": false,
+    "Compress": true,
+    "LambdaFunctionAssociations": {"Quantity": 0},
+    "FunctionAssociations": {"Quantity": 0},
+    "FieldLevelEncryptionId": "",
+    "GrpcConfig": {"Enabled": false},
+    "ForwardedValues": {
+      "QueryString": false,
+      "Cookies": {"Forward": "none"},
+      "Headers": {"Quantity": 0},
+      "QueryStringCacheKeys": {"Quantity": 0}
+    },
+    "MinTTL": 0,
+    "DefaultTTL": 86400,
+    "MaxTTL": 31536000
+  },
+  "CacheBehaviors": {
+    "Quantity": 1,
+    "Items": [
+      {
+        "PathPattern": "*.jarz",
+        "TargetOriginId": "jarz-s3-origin",
+        "TrustedSigners": {"Enabled": false, "Quantity": 0},
+        "TrustedKeyGroups": {"Enabled": false, "Quantity": 0},
+        "ViewerProtocolPolicy": "https-only",
+        "AllowedMethods": {
+          "Quantity": 2,
+          "Items": ["HEAD", "GET"],
+          "CachedMethods": {"Quantity": 2, "Items": ["HEAD", "GET"]}
+        },
+        "SmoothStreaming": false,
+        "Compress": false,
+        "LambdaFunctionAssociations": {"Quantity": 0},
+        "FunctionAssociations": {"Quantity": 0},
+        "FieldLevelEncryptionId": "",
+        "GrpcConfig": {"Enabled": false},
+        "ForwardedValues": {
+          "QueryString": false,
+          "Cookies": {"Forward": "none"},
+          "Headers": {
+            "Quantity": 3,
+            "Items": ["If-Range", "If-Modified-Since", "Range"]
+          },
+          "QueryStringCacheKeys": {"Quantity": 0}
+        },
+        "MinTTL": 0,
+        "DefaultTTL": 31536000,
+        "MaxTTL": 31536000
+      }
+    ]
+  },
+  "CustomErrorResponses": {"Quantity": 0},
+  "Comment": "JARZ Distribution CDN - Free Plan",
+  "Logging": {
+    "Enabled": false,
+    "IncludeCookies": false,
+    "Bucket": "",
+    "Prefix": ""
+  },
+  "PriceClass": "PriceClass_All",
+  "Enabled": true,
+  "ViewerCertificate": {
+    "CloudFrontDefaultCertificate": false,
+    "ACMCertificateArn": "arn:aws:acm:us-east-1:864899852480:certificate/0539b099-8316-4ab7-a94b-dae1fdf9ebef",
+    "SSLSupportMethod": "sni-only",
+    "MinimumProtocolVersion": "TLSv1.2_2021",
+    "Certificate": "arn:aws:acm:us-east-1:864899852480:certificate/0539b099-8316-4ab7-a94b-dae1fdf9ebef",
+    "CertificateSource": "acm"
+  },
+  "Restrictions": {
+    "GeoRestriction": {"RestrictionType": "none", "Quantity": 0}
+  },
+  "WebACLId": "",
+  "HttpVersion": "http2",
+  "IsIPV6Enabled": true,
+  "ContinuousDeploymentPolicyId": "",
+  "Staging": false
+}

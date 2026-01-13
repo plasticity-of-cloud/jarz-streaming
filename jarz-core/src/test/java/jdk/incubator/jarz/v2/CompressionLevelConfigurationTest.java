@@ -37,12 +37,13 @@ class CompressionLevelConfigurationTest {
         // Clear property to test default
         System.clearProperty("jarz.compression.level");
         
-        // Force re-evaluation by creating new enum instances
+        // All compressible types should use default level (3)
         assertEquals(3, BlockType.CLASS.compressionLevel());
         assertEquals(3, BlockType.CONFIG.compressionLevel());
         assertEquals(3, BlockType.SERVICE.compressionLevel());
         assertEquals(3, BlockType.TEXT.compressionLevel());
         assertEquals(3, BlockType.MANIFEST.compressionLevel());
+        assertEquals(3, BlockType.NATIVE.compressionLevel()); // Now uses configured level
     }
     
     @Test
@@ -50,14 +51,31 @@ class CompressionLevelConfigurationTest {
         // Set custom compression level
         System.setProperty("jarz.compression.level", "7");
         
-        // Note: Since the property is read statically, we need to test the behavior
-        // This test validates the logic, but the static initialization means
-        // the actual value won't change during test execution
+        // All compressible types should use configured level
+        assertEquals(7, BlockType.CLASS.compressionLevel());
+        assertEquals(7, BlockType.CONFIG.compressionLevel());
+        assertEquals(7, BlockType.SERVICE.compressionLevel());
+        assertEquals(7, BlockType.TEXT.compressionLevel());
+        assertEquals(7, BlockType.MANIFEST.compressionLevel());
+        assertEquals(7, BlockType.NATIVE.compressionLevel()); // Now respects system property
         
-        // Verify special cases still work correctly
-        assertEquals(1, BlockType.NATIVE.compressionLevel()); // Always 1
-        assertEquals(0, BlockType.STORED.compressionLevel()); // Always 0
+        // STORED should never compress
+        assertEquals(0, BlockType.STORED.compressionLevel());
         assertFalse(BlockType.STORED.shouldCompress());
+    }
+    
+    @Test
+    void testNativeLibraryCompressionLevelOverride() {
+        // Test that NATIVE type now respects system property
+        System.setProperty("jarz.compression.level", "9");
+        
+        assertEquals(9, BlockType.NATIVE.compressionLevel());
+        assertTrue(BlockType.NATIVE.shouldCompress());
+        
+        // Test with different level
+        System.setProperty("jarz.compression.level", "5");
+        assertEquals(5, BlockType.NATIVE.compressionLevel());
+        assertTrue(BlockType.NATIVE.shouldCompress());
     }
     
     @Test
@@ -65,8 +83,15 @@ class CompressionLevelConfigurationTest {
         // Test invalid values fall back to default
         System.setProperty("jarz.compression.level", "invalid");
         
-        // The static initialization will use default for invalid values
-        // This test documents the expected behavior
+        // All compressible types should fall back to default (3)
+        assertEquals(3, BlockType.CLASS.compressionLevel());
+        assertEquals(3, BlockType.CONFIG.compressionLevel());
+        assertEquals(3, BlockType.SERVICE.compressionLevel());
+        assertEquals(3, BlockType.TEXT.compressionLevel());
+        assertEquals(3, BlockType.MANIFEST.compressionLevel());
+        assertEquals(3, BlockType.NATIVE.compressionLevel());
+        
+        // Verify compression flags
         assertTrue(BlockType.CLASS.shouldCompress());
         assertTrue(BlockType.CONFIG.shouldCompress());
         assertTrue(BlockType.SERVICE.shouldCompress());
@@ -78,18 +103,21 @@ class CompressionLevelConfigurationTest {
     
     @Test
     void testCompressionLevelBoundaries() {
-        // Test boundary values - valid range is now 3-11
+        // Test minimum valid level
         System.setProperty("jarz.compression.level", "3");
-        // Level 3 should be valid (minimum)
+        assertEquals(3, BlockType.NATIVE.compressionLevel());
         
+        // Test maximum valid level
         System.setProperty("jarz.compression.level", "11");
-        // Level 11 should be valid (maximum)
+        assertEquals(11, BlockType.NATIVE.compressionLevel());
         
+        // Test below minimum - should fall back to default
         System.setProperty("jarz.compression.level", "2");
-        // Level 2 should fall back to default (below minimum)
+        assertEquals(3, BlockType.NATIVE.compressionLevel());
         
+        // Test above maximum - should fall back to default
         System.setProperty("jarz.compression.level", "12");
-        // Level 12 should fall back to default (above maximum)
+        assertEquals(3, BlockType.NATIVE.compressionLevel());
         
         // All main content types should still be compressible
         assertTrue(BlockType.CLASS.shouldCompress());
@@ -97,19 +125,35 @@ class CompressionLevelConfigurationTest {
         assertTrue(BlockType.SERVICE.shouldCompress());
         assertTrue(BlockType.TEXT.shouldCompress());
         assertTrue(BlockType.MANIFEST.shouldCompress());
+        assertTrue(BlockType.NATIVE.shouldCompress());
     }
     
     @Test
-    void testSpecialBlockTypes() {
+    void testStoredBlockTypeNeverCompresses() {
         // Set any compression level
         System.setProperty("jarz.compression.level", "9");
         
-        // NATIVE should always use level 1
-        assertEquals(1, BlockType.NATIVE.compressionLevel());
-        assertTrue(BlockType.NATIVE.shouldCompress());
-        
-        // STORED should never compress
+        // STORED should never compress regardless of system property
         assertEquals(0, BlockType.STORED.compressionLevel());
         assertFalse(BlockType.STORED.shouldCompress());
+        
+        // Test with different level
+        System.setProperty("jarz.compression.level", "3");
+        assertEquals(0, BlockType.STORED.compressionLevel());
+        assertFalse(BlockType.STORED.shouldCompress());
+    }
+    
+    @Test
+    void testAllBlockTypesWithHighCompressionLevel() {
+        // Test all block types with high compression level
+        System.setProperty("jarz.compression.level", "11");
+        
+        assertEquals(11, BlockType.CLASS.compressionLevel());
+        assertEquals(11, BlockType.CONFIG.compressionLevel());
+        assertEquals(11, BlockType.SERVICE.compressionLevel());
+        assertEquals(11, BlockType.TEXT.compressionLevel());
+        assertEquals(11, BlockType.MANIFEST.compressionLevel());
+        assertEquals(11, BlockType.NATIVE.compressionLevel()); // Key test: NATIVE now uses high compression
+        assertEquals(0, BlockType.STORED.compressionLevel());  // Still never compresses
     }
 }

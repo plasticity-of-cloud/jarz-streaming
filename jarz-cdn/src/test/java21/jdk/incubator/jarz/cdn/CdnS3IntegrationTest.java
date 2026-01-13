@@ -432,7 +432,7 @@ class CdnS3IntegrationTest {
             System.out.println("\n🔥 Testing actual class loading with enhanced local index:");
             
             try (CdnHybridJarzDataProvider provider = new CdnHybridJarzDataProvider(cdnUrl, tempIndexPath);
-                 JarzClassLoader loader = new JarzClassLoader(provider)) {
+                 CdnJarzClassLoader loader = new CdnJarzClassLoader(cdnUrl, tempIndexPath)) {
                 
                 System.out.println("  - Enhanced local index available: " + provider.hasLocalIndex());
                 

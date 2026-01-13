@@ -101,12 +101,20 @@ class DictionaryPerformanceTest {
             
             for (int i = 0; i < 300; i++) {
                 Path classFile = corpusDir.resolve("Class" + i + ".class");
-                byte[] classBytes = switch (patternType) {
-                    case "uniform" -> generateUniformBytecode(i);
-                    case "varied" -> generateVariedBytecode(i);
-                    case "repetitive" -> generateRepetitiveBytecode(i);
-                    default -> throw new IllegalArgumentException("Unknown pattern type");
-                };
+                byte[] classBytes;
+                switch (patternType) {
+                    case "uniform":
+                        classBytes = generateUniformBytecode(i);
+                        break;
+                    case "varied":
+                        classBytes = generateVariedBytecode(i);
+                        break;
+                    case "repetitive":
+                        classBytes = generateRepetitiveBytecode(i);
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Unknown pattern type");
+                }
                 Files.write(classFile, classBytes);
             }
             

@@ -209,6 +209,8 @@ Complete project documentation is organized in the [docs/](docs/) folder:
 - **📊 [Performance Analysis](docs/analysis/)** - Storage and cost analysis
 - **🧪 [Testing Strategy](docs/testing/Testing-Strategy.md)** - Quality assurance approach
 - **📈 [Test Results](docs/results/JDK-Compression-Test-Results.md)** - Real JDK compression validation
+- **🚀 [JARZ LSP Integration Proposal](docs/proposals/jarz-lsp-integration/)** - Revolutionary Java development via streaming dependencies
+- **📖 [JARZ CLI User Guide](docs/user-guides/JARZ-CLI-User-Guide.md)** - Complete command-line interface guide
 
 ## Contributing
 
@@ -216,6 +218,13 @@ See the [technical specification](docs/technical-specs/JEP-ZSTD-ClassLoader.md) 
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is dual-licensed:
+
+- **Open Source**: [GNU Affero General Public License v3.0 (AGPL v3)](LICENSE-AGPL) for open source and non-commercial use
+- **Commercial**: [Commercial License](LICENSE-COMMERCIAL) for proprietary applications and commercial use
+
+See [LICENSE](LICENSE) for detailed licensing information and guidance on which license applies to your use case.
+
+**For commercial licensing inquiries**: ecosystem@plasticity.cloud
 
 Copyright 2024-2026 Plasticity.Cloud

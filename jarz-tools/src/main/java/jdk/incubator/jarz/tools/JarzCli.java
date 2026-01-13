@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -71,11 +72,24 @@ public class JarzCli {
         ParsedArgs parsedArgs = JarzArgumentParser.parse(args);
         
         switch (parsedArgs.getOperation()) {
-            case CREATE -> handleCreate(parsedArgs);
-            case EXTRACT -> handleExtract(parsedArgs);
-            case LIST -> handleList(parsedArgs);
-            case UPDATE -> handleUpdate(parsedArgs);
-            case CONVERT -> handleConvert(parsedArgs);
+            case CREATE:
+                handleCreate(parsedArgs);
+                break;
+            case EXTRACT:
+                handleExtract(parsedArgs);
+                break;
+            case LIST:
+                handleList(parsedArgs);
+                break;
+            case UPDATE:
+                handleUpdate(parsedArgs);
+                break;
+            case CONVERT:
+                handleConvert(parsedArgs);
+                break;
+            case TREE:
+                handleTree(parsedArgs);
+                break;
         }
     }
     
@@ -289,6 +303,81 @@ public class JarzCli {
     }
     
     /**
+     * Handles tree operation (--tree) to display JARZ block structure.
+     */
+    private static void handleTree(ParsedArgs args) throws Exception {
+        if (args.getArchiveFile() == null) {
+            throw new IllegalArgumentException("Tree operation requires archive file (-f)");
+        }
+        
+        Path jarzFile = Paths.get(args.getArchiveFile());
+        if (!Files.exists(jarzFile)) {
+            throw new IllegalArgumentException("JARZ file not found: " + jarzFile);
+        }
+        
+        if (args.isVerbose()) {
+            System.out.println("analyzing: " + jarzFile);
+        }
+        
+        // Read JARZ structure using BlockReader
+        try (BlockReader reader = new BlockReader(jarzFile)) {
+            displayBlockTree(reader, args.isVerbose());
+        }
+    }
+    
+    /**
+     * Display the block tree structure of a JARZ file.
+     */
+    private static void displayBlockTree(BlockReader reader, boolean verbose) throws Exception {
+        // Get block index and class index
+        var blockIndex = reader.getBlockIndex();
+        var classIndex = reader.getClassIndex();
+        
+        System.out.println("JARZ Block Structure:");
+        System.out.println("====================");
+        
+        // Group classes by block
+        Map<Integer, List<String>> blockToClasses = new TreeMap<>();
+        for (var entry : classIndex.getEntries()) {
+            blockToClasses.computeIfAbsent(entry.blockId(), k -> new ArrayList<>()).add(entry.className());
+        }
+        
+        long totalSize = 0;
+        long totalCompressed = 0;
+        
+        for (var blockEntry : blockIndex.getEntries()) {
+            int blockId = blockEntry.blockId();
+            List<String> classes = blockToClasses.getOrDefault(blockId, List.of());
+            
+            System.out.printf("📦 Block %d:%n", blockId);
+            System.out.printf("   Size: %,d bytes (compressed: %,d bytes, %.1f%% ratio)%n", 
+                blockEntry.uncompressedSize(), 
+                blockEntry.compressedSize(),
+                (1.0 - (double)blockEntry.compressedSize() / blockEntry.uncompressedSize()) * 100);
+            System.out.printf("   Classes: %d%n", classes.size());
+            
+            if (verbose && !classes.isEmpty()) {
+                System.out.println("   └── Classes:");
+                for (String className : classes.stream().sorted().collect(Collectors.toList())) {
+                    System.out.println("       ├── " + className);
+                }
+            }
+            
+            totalSize += blockEntry.uncompressedSize();
+            totalCompressed += blockEntry.compressedSize();
+            System.out.println();
+        }
+        
+        System.out.println("📊 Summary:");
+        System.out.printf("   Total blocks: %d%n", blockIndex.getEntries().size());
+        System.out.printf("   Total classes: %d%n", classIndex.getEntries().size());
+        System.out.printf("   Total size: %,d bytes%n", totalSize);
+        System.out.printf("   Compressed: %,d bytes%n", totalCompressed);
+        System.out.printf("   Overall compression: %.1f%%%n", 
+            (1.0 - (double)totalCompressed / totalSize) * 100);
+    }
+    
+    /**
      * Collects entries from a file or directory recursively.
      */
     private static void collectEntries(Path path, Path baseDir, Map<String, byte[]> entries, boolean verbose) throws IOException {
@@ -459,6 +548,7 @@ public class JarzCli {
         System.out.println("  -t, --list                 list contents of archive");
         System.out.println("  -u, --update               update existing archive");
         System.out.println("      --convert              convert JAR to JARZ (extension)");
+        System.out.println("      --tree                 show block structure (JARZ only)");
         System.out.println();
         System.out.println("Operation modifiers (valid in any mode):");
         System.out.println("  -f, --file=FILE            archive file name");

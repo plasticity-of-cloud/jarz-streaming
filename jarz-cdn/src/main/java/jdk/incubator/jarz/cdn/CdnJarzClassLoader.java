@@ -2,25 +2,26 @@ package jdk.incubator.jarz.cdn;
 
 import jdk.incubator.jarz.classloader.JarzClassLoader;
 import jdk.incubator.jarz.v2.HttpJarzDataProvider;
-import jdk.incubator.jarz.v2.HttpJarzDataProvider;
 import jdk.incubator.jarz.v2.CdnHybridJarzDataProvider;
-import jdk.incubator.jarz.v2.JarzDataProvider;
 
 import java.io.IOException;
 import java.nio.file.Path;
 
 /**
- * CDN-based JARZ ClassLoader using HTTP range requests.
+ * CDN-based JARZ ClassLoader using HTTP range requests with bundle index support.
  * 
  * <p>This ClassLoader extends the unified JarzClassLoader with HTTP data provider
  * for efficient streaming access to JARZ archives hosted on CDNs or S3.
  * 
- * <p>Supports local index optimization for instant class location without network requests.
+ * <p>Supports bundle index for O(1) class lookup across multiple CDN-hosted JARZ files.
  * 
  * @author Plasticity.Cloud
  * @since 1.0
  */
 public class CdnJarzClassLoader extends JarzClassLoader {
+    
+    private final String baseUrl;
+    private final String jarzUrl;
     
     /**
      * Interface for providing signed URLs for private resources.
@@ -30,64 +31,55 @@ public class CdnJarzClassLoader extends JarzClassLoader {
     }
     
     /**
-     * Creates CDN ClassLoader with local index optimization.
+     * Creates CDN ClassLoader with bundle index support.
      * 
      * @param jarzUrl URL to JARZ archive
-     * @param localIndexPath path to local index file (optional)
+     * @param bundleIndexPath path to bundle index file (optional)
      */
-    public CdnJarzClassLoader(String jarzUrl, Path localIndexPath) throws IOException {
-        super(new CdnHybridJarzDataProvider(jarzUrl, localIndexPath), Thread.currentThread().getContextClassLoader());
+    public CdnJarzClassLoader(String jarzUrl, Path bundleIndexPath) throws IOException {
+        this(jarzUrl, bundleIndexPath, Thread.currentThread().getContextClassLoader());
     }
     
     /**
-     * Creates CDN ClassLoader with local index optimization and custom parent.
+     * Creates CDN ClassLoader with bundle index support and custom parent.
      */
-    public CdnJarzClassLoader(String jarzUrl, Path localIndexPath, ClassLoader parent) throws IOException {
-        super(new CdnHybridJarzDataProvider(jarzUrl, localIndexPath), parent);
+    public CdnJarzClassLoader(String jarzUrl, Path bundleIndexPath, ClassLoader parent) throws IOException {
+        super(bundleIndexPath != null ? 
+              new CdnHybridJarzDataProvider(jarzUrl, bundleIndexPath) : 
+              new HttpJarzDataProvider(jarzUrl), 
+              parent, 
+              bundleIndexPath);
+        this.jarzUrl = jarzUrl;
+        this.baseUrl = extractBaseUrl(jarzUrl);
     }
     
     /**
      * Creates a CDN ClassLoader for the specified JARZ archive URL (backward compatibility).
-     *
-     * @param jarzUrl full URL to the JARZ v2 archive (e.g., "https://cdn.example.com/app.jarz")
-     * @throws IOException if the JARZ URL cannot be accessed
      */
     public CdnJarzClassLoader(String jarzUrl) throws IOException {
-        super(new HttpJarzDataProvider(jarzUrl)); // Use HttpJarzDataProvider constructor
+        this(jarzUrl, (Path) null);
     }
     
     /**
-     * Creates a CDN ClassLoader with a custom signed URL provider for private archives (backward compatibility).
-     *
-     * @param jarzUrl base URL to the JARZ v2 archive
-     * @param urlProvider provider for generating signed URLs
-     * @param cacheSize ignored (maintained for API compatibility)
-     * @throws IOException if the JARZ URL cannot be accessed
+     * Creates a CDN ClassLoader with custom parent ClassLoader (backward compatibility).
      */
-    public CdnJarzClassLoader(String jarzUrl, SignedUrlProvider urlProvider, int cacheSize) throws IOException {
-        super(new HttpJarzDataProvider(jarzUrl, new SignedUrlProviderAdapter(urlProvider)));
+    public CdnJarzClassLoader(String jarzUrl, ClassLoader parent) throws IOException {
+        this(jarzUrl, (Path) null, parent);
     }
     
-    /**
-     * Creates a CDN ClassLoader with HttpJarzDataProvider.
-     */
-    private CdnJarzClassLoader(HttpJarzDataProvider dataProvider) throws IOException {
-        super((JarzDataProvider) dataProvider);
+    @Override
+    protected String getCurrentJarzUrl() {
+        return jarzUrl;
     }
     
-    /**
-     * Adapter to convert old SignedUrlProvider to new HttpJarzDataProvider.SignedUrlProvider.
-     */
-    private static class SignedUrlProviderAdapter implements HttpJarzDataProvider.SignedUrlProvider {
-        private final SignedUrlProvider delegate;
-        
-        public SignedUrlProviderAdapter(SignedUrlProvider delegate) {
-            this.delegate = delegate;
-        }
-        
-        @Override
-        public String signUrl(String originalUrl) throws IOException {
-            return delegate.signUrl(originalUrl);
-        }
+    @Override
+    protected JarzClassLoader createChildLoader(String jarzUrl) throws IOException {
+        String fullUrl = jarzUrl.startsWith("http") ? jarzUrl : baseUrl + "/" + jarzUrl;
+        return new CdnJarzClassLoader(fullUrl, (Path) null); // No bundle index for children
+    }
+    
+    private String extractBaseUrl(String jarzUrl) {
+        int lastSlash = jarzUrl.lastIndexOf('/');
+        return lastSlash > 0 ? jarzUrl.substring(0, lastSlash) : jarzUrl;
     }
 }

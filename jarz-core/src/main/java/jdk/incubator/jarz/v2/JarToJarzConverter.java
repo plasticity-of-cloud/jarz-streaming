@@ -73,7 +73,29 @@ public class JarToJarzConverter {
         
         // Step 1: Analyze dependencies using jdeps
         DependencyAnalyzer analyzer = new DependencyAnalyzer();
-        DependencyGraph graph = analyzer.analyze(jarFile);
+        DependencyGraph graph;
+        
+        // Check for system property classpath for better dependency resolution
+        String systemClasspath = System.getProperty("jarz.analysis.classpath");
+        if (systemClasspath != null && !systemClasspath.isEmpty()) {
+            // Use classpath-aware analysis
+            try {
+                graph = analyzer.analyze(jarFile, systemClasspath);
+            } catch (RuntimeException | IOException e) {
+                // If classpath analysis fails, fallback to simple analysis
+                System.out.println("   jdeps with classpath failed, using simple block organization");
+                graph = createSimpleGraph(jarFile);
+            }
+        } else {
+            // Fallback to standard analysis
+            try {
+                graph = analyzer.analyze(jarFile);
+            } catch (Exception e) {
+                // If jdeps fails, create simple graph
+                System.out.println("   jdeps failed, using simple block organization");
+                graph = createSimpleGraph(jarFile);
+            }
+        }
         
         // Step 2: Extract class files from JAR
         Map<String, byte[]> classFiles = new HashMap<>();
@@ -86,6 +108,10 @@ public class JarToJarzConverter {
                     if (entry.getName().endsWith(".class")) {
                         classFiles.put(entry.getName(), content);
                     } else {
+                        // Process manifest files to update Class-Path entries
+                        if (ManifestProcessor.isManifestFile(entry.getName())) {
+                            content = ManifestProcessor.processManifest(content);
+                        }
                         resourceFiles.put(entry.getName(), content);
                     }
                 }
@@ -96,13 +122,19 @@ public class JarToJarzConverter {
         BlockAssigner assigner = new BlockAssigner();
         List<Block> blocks = assigner.assignBlocks(classFiles, graph);
         
-        // Step 4: Add resources to appropriate blocks
+        // Step 4: Assign resources to typed blocks using ResourceBlockAssigner
         if (!resourceFiles.isEmpty()) {
-            Block resourceBlock = new Block(blocks.size());
-            for (Map.Entry<String, byte[]> entry : resourceFiles.entrySet()) {
-                resourceBlock.add(entry.getKey(), entry.getValue());
+            ResourceBlockAssigner resourceAssigner = new ResourceBlockAssigner();
+            List<TypedBlock> resourceBlocks = resourceAssigner.assign(resourceFiles, blocks.size());
+            
+            // Convert TypedBlocks to regular Blocks for compatibility
+            for (TypedBlock typedBlock : resourceBlocks) {
+                Block block = new Block(typedBlock.id());
+                for (TypedBlock.Entry entry : typedBlock.entries()) {
+                    block.add(entry.name(), entry.data());
+                }
+                blocks.add(block);
             }
-            blocks.add(resourceBlock);
         }
         
         // Step 5: Write multi-block JARZ v2
@@ -132,5 +164,18 @@ public class JarToJarzConverter {
         }
         Path tempJarz = Files.createTempFile(baseName, ".jarz");
         return convert(jarFile, tempJarz);
+    }
+    
+    private static DependencyGraph createSimpleGraph(Path jarFile) throws IOException {
+        var graph = new DependencyGraph();
+        
+        try (var jar = new JarFile(jarFile.toFile())) {
+            jar.stream()
+                .filter(entry -> entry.getName().endsWith(".class"))
+                .map(entry -> entry.getName().replace(".class", ""))
+                .forEach(graph::addClass);
+        }
+        
+        return graph;
     }
 }

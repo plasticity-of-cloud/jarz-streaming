@@ -2,6 +2,8 @@ package jdk.incubator.jarz.classloader;
 
 import jdk.incubator.jarz.v2.BlockReader;
 import jdk.incubator.jarz.v2.JarzDataProvider;
+import jdk.incubator.jarz.v2.HttpJarzDataProvider;
+import jdk.incubator.jarz.v2.JarzLocalIndex;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -16,11 +18,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.Manifest;
 
 /**
- * Base ClassLoader implementation for JARZ archives.
+ * Base ClassLoader implementation for JARZ archives with bundle index support.
  * 
  * <p>This ClassLoader provides core functionality for loading classes and resources
- * from JARZ archives. It follows JDK ClassLoader patterns and can be used for
+ * from JARZ archives with optional bundle index support for efficient multi-JARZ
+ * class lookup. It follows JDK ClassLoader patterns and can be used for
  * library loading scenarios where Main-Class is not required.
+ * 
+ * <p>Bundle index support enables O(1) class lookup across multiple JARZ files,
+ * eliminating sequential search and providing consistent performance regardless
+ * of classpath size.
  * 
  * <p>For application loading with Main-Class support, use {@link JarzApplicationClassLoader}.
  * 
@@ -31,7 +38,7 @@ import java.util.jar.Manifest;
  * @author Plasticity.Cloud
  * @since 1.0
  */
-public class JarzClassLoader extends SecureClassLoader implements AutoCloseable {
+public abstract class JarzClassLoader extends SecureClassLoader implements AutoCloseable {
     
     // Core components - OPTIMIZED: Shared BlockReader via pool
     private final Path jarzFilePath;
@@ -39,6 +46,11 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
     protected final Manifest manifest;
     protected final ProtectionDomain protectionDomain;
     protected final URL codeSource;
+    protected final JarzDataProvider dataProvider;
+    
+    // Bundle index support for multi-JARZ class loading
+    protected JarzLocalIndex.JarzBundleIndex bundleIndex;
+    protected final Map<String, JarzClassLoader> childLoaders = new ConcurrentHashMap<>();
     
     // Classpath handling
     protected final JarzClasspathResolver classpathResolver;
@@ -51,7 +63,6 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
         ThreadLocal.withInitial(() -> new StringBuilder(256));
     
     // State management
-    private volatile boolean closed = false;
     
     /**
      * Converts JVM binary name to JARZ index format.
@@ -92,6 +103,7 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
             sb.append(c == '/' ? '.' : c);
         }
     }
+    private volatile boolean closed = false;
     private final Object closeLock = new Object();
     
     // OPTIMIZATION: Lazy initialization methods to reduce memory overhead
@@ -118,6 +130,16 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
     }
     
     /**
+     * Creates a new JarzClassLoader for a remote JARZ URL.
+     * 
+     * @param jarzUrl URL to the JARZ archive
+     * @throws IOException if the JARZ URL cannot be accessed
+     */
+    public JarzClassLoader(String jarzUrl) throws IOException {
+        this(new HttpJarzDataProvider(jarzUrl), getSystemClassLoader());
+    }
+    
+    /**
      * Creates a new JarzClassLoader with custom data provider.
      * 
      * @param dataProvider data provider for JARZ access
@@ -125,38 +147,6 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
      */
     public JarzClassLoader(JarzDataProvider dataProvider) throws IOException {
         this(dataProvider, getSystemClassLoader());
-    }
-    
-    /**
-     * Creates a new JarzClassLoader with custom data provider and parent ClassLoader.
-     * 
-     * @param dataProvider data provider for JARZ access
-     * @param parent parent ClassLoader for delegation
-     * @throws IOException if the JARZ data cannot be read
-     */
-    public JarzClassLoader(JarzDataProvider dataProvider, ClassLoader parent) throws IOException {
-        super(parent);
-        
-        if (dataProvider == null) {
-            throw new IllegalArgumentException("Data provider cannot be null");
-        }
-        
-        try {
-            this.jarzFilePath = null; // No local file path for remote sources
-            this.blockReader = BlockReaderPool.acquire(dataProvider);
-            this.manifest = null; // No manifest caching for data providers
-            
-            // For remote sources, create a synthetic URL
-            this.codeSource = new java.net.URL("file", null, -1, "remote-jarz");
-            this.protectionDomain = ProtectionDomainFactory.getProtectionDomain(codeSource);
-            this.classpathResolver = null; // No classpath resolution for remote sources
-        } catch (Exception e) {
-            try { close(); } catch (IOException ignored) {}
-            if (e instanceof IOException) {
-                throw (IOException) e;
-            }
-            throw new IOException("Failed to initialize JARZ ClassLoader", e);
-        }
     }
     
     /**
@@ -182,6 +172,7 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
         }
         
         try {
+            this.dataProvider = null; // Old constructor doesn't use data provider
             this.jarzFilePath = jarzFile;
             this.blockReader = BlockReaderPool.acquire(jarzFile);
             this.manifest = ManifestCache.getManifest(jarzFile, blockReader);
@@ -194,6 +185,109 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
                 throw (IOException) e;
             }
             throw new IOException("Failed to initialize JARZ ClassLoader", e);
+        }
+    }
+    
+    /**
+     * Creates a new JarzClassLoader with custom data provider and parent ClassLoader.
+     * 
+     * @param dataProvider data provider for JARZ access
+     * @param parent parent ClassLoader for delegation
+     * @throws IOException if the JARZ data cannot be read
+     */
+    public JarzClassLoader(JarzDataProvider dataProvider, ClassLoader parent) throws IOException {
+        super(parent);
+        
+        if (dataProvider == null) {
+            throw new IllegalArgumentException("Data provider cannot be null");
+        }
+        
+        try {
+            this.dataProvider = dataProvider;
+            this.jarzFilePath = null; // No local file path for remote sources
+            this.blockReader = new BlockReader(dataProvider);
+            this.manifest = readManifestFromDataProvider();
+            
+            // For remote sources, create a synthetic URL with a valid protocol
+            this.codeSource = new URL("file", null, -1, "/remote-jarz");
+            this.protectionDomain = ProtectionDomainFactory.getProtectionDomain(codeSource);
+            this.classpathResolver = null; // No classpath resolution for remote sources
+        } catch (Exception e) {
+            try { close(); } catch (IOException ignored) {}
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            }
+            throw new IOException("Failed to initialize JARZ ClassLoader with data provider", e);
+        }
+    }
+    
+    /**
+     * Creates a new JarzClassLoader with custom data provider, parent ClassLoader, and bundle index.
+     * 
+     * @param dataProvider data provider for JARZ access
+     * @param parent parent ClassLoader for delegation
+     * @param bundleIndexPath optional path to bundle index file for multi-JARZ support
+     * @throws IOException if the JARZ data cannot be read
+     */
+    public JarzClassLoader(JarzDataProvider dataProvider, ClassLoader parent, Path bundleIndexPath) throws IOException {
+        super(parent);
+        
+        if (dataProvider == null) {
+            throw new IllegalArgumentException("Data provider cannot be null");
+        }
+        
+        try {
+            this.dataProvider = dataProvider;
+            this.jarzFilePath = null; // May not have local file path for remote sources
+            this.blockReader = new BlockReader(dataProvider);
+            this.manifest = readManifestFromDataProvider();
+            
+            // For remote sources, create a synthetic URL with a valid protocol
+            this.codeSource = new URL("file", null, -1, "/remote-jarz");
+            this.protectionDomain = ProtectionDomainFactory.getProtectionDomain(codeSource);
+            this.classpathResolver = null; // No classpath resolution for remote sources
+            
+            // Load bundle index if provided
+            if (bundleIndexPath != null && Files.exists(bundleIndexPath)) {
+                this.bundleIndex = JarzLocalIndex.loadBundle(bundleIndexPath);
+            }
+        } catch (Exception e) {
+            try { close(); } catch (IOException ignored) {}
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            }
+            throw new IOException("Failed to initialize JARZ ClassLoader", e);
+        }
+    }
+    
+    /**
+     * Abstract method to get the current JARZ URL/identifier.
+     * Used for bundle index lookups to avoid self-delegation.
+     * 
+     * @return the current JARZ URL or identifier
+     */
+    protected abstract String getCurrentJarzUrl();
+    
+    /**
+     * Abstract method to create child ClassLoaders for other JARZ files.
+     * Each implementation handles its specific data source (local, CDN, S3).
+     * 
+     * @param jarzUrl the JARZ URL or identifier to create a loader for
+     * @return a new JarzClassLoader for the specified JARZ
+     * @throws IOException if the child loader cannot be created
+     */
+    protected abstract JarzClassLoader createChildLoader(String jarzUrl) throws IOException;
+    
+    private Manifest readManifestFromDataProvider() throws IOException {
+        // Use BlockReader to read manifest
+        byte[] manifestBytes = blockReader.readEntry("META-INF/MANIFEST.MF");
+        if (manifestBytes == null) {
+            // Create empty manifest if none exists
+            return new Manifest();
+        }
+        
+        try (ByteArrayInputStream bis = new ByteArrayInputStream(manifestBytes)) {
+            return new Manifest(bis);
         }
     }
     
@@ -252,13 +346,28 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
             return cached;
         }
         
-        // Convert binary name to index format efficiently
+        // 1. Try bundle index first (O(1) lookup across multiple JARZ files)
+        if (bundleIndex != null) {
+            String jarzUrl = bundleIndex.findJarzForClass(name);
+            if (jarzUrl != null && !jarzUrl.equals(getCurrentJarzUrl())) {
+                // Class is in different JARZ - delegate to child loader
+                try {
+                    JarzClassLoader childLoader = getOrCreateChildLoader(jarzUrl);
+                    Class<?> clazz = childLoader.loadClass(name);
+                    getClassCache().put(name, clazz); // Cache in parent for faster subsequent access
+                    return clazz;
+                } catch (IOException e) {
+                    throw new ClassNotFoundException("Failed to load from " + jarzUrl, e);
+                }
+            }
+        }
+        
+        // 2. Try current JARZ archive - direct lookup with correct format
         StringBuilder sb = STRING_BUILDER.get();
         toIndexFormat(name, sb);
         String indexKey = sb.toString();
         
         try {
-            // Try main JARZ archive - direct lookup with correct format
             byte[] classData = blockReader.readEntry(indexKey);
             if (classData != null) {
                 Class<?> clazz = defineClass(name, classData, 0, classData.length, protectionDomain);
@@ -266,7 +375,7 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
                 return clazz;
             }
             
-            // Try classpath JARZ files
+            // 3. Try classpath JARZ files (fallback for non-bundle scenarios)
             if (classpathResolver != null) {
                 try {
                     byte[] classpathData = classpathResolver.findClass(name);
@@ -285,6 +394,24 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
         }
         
         throw new ClassNotFoundException(name);
+    }
+    
+    /**
+     * Gets or creates a child ClassLoader for the specified JARZ URL.
+     * Child loaders are cached to avoid repeated creation.
+     * 
+     * @param jarzUrl the JARZ URL to create a loader for
+     * @return cached or new JarzClassLoader for the specified JARZ
+     * @throws IOException if the child loader cannot be created
+     */
+    private JarzClassLoader getOrCreateChildLoader(String jarzUrl) throws IOException {
+        return childLoaders.computeIfAbsent(jarzUrl, url -> {
+            try {
+                return createChildLoader(url);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create child loader for " + url, e);
+            }
+        });
     }
     
     @Override
@@ -334,6 +461,18 @@ public class JarzClassLoader extends SecureClassLoader implements AutoCloseable 
         if (classCache != null) {
             classCache.clear();
         }
+        
+        // Close child loaders
+        for (JarzClassLoader childLoader : childLoaders.values()) {
+            try {
+                childLoader.close();
+            } catch (IOException e) {
+                if (firstException == null) {
+                    firstException = e;
+                }
+            }
+        }
+        childLoaders.clear();
         
         // Close classpath resolver
         if (classpathResolver != null) {

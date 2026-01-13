@@ -99,7 +99,8 @@ public final class JarzArgumentParser {
         EXTRACT,   // -x, --extract  
         LIST,      // -t, --list
         UPDATE,    // -u, --update
-        CONVERT    // --convert (JARZ-specific)
+        CONVERT,   // --convert (JARZ-specific)
+        TREE       // --tree (JARZ-specific: show block structure)
     }
     
     /**
@@ -153,24 +154,59 @@ public final class JarzArgumentParser {
                 if (arg.startsWith("--")) {
                     // Long options
                     switch (arg) {
-                        case "--create" -> operation = Operation.CREATE;
-                        case "--extract" -> operation = Operation.EXTRACT;
-                        case "--list" -> operation = Operation.LIST;
-                        case "--update" -> operation = Operation.UPDATE;
-                        case "--convert" -> operation = Operation.CONVERT;
-                        case "--verbose" -> verbose = true;
-                        case "--no-compress" -> noCompress = true;
-                        case "--no-manifest" -> noManifest = true;
-                        case "--file" -> archiveFile = iter.nextRequired("--file");
-                        case "--manifest" -> manifestFile = iter.nextRequired("--manifest");
-                        case "--main-class" -> mainClass = iter.nextRequired("--main-class");
-                        case "--release" -> releaseVersion = iter.nextRequired("--release");
-                        case "--module-version" -> moduleVersion = iter.nextRequired("--module-version");
-                        case "--hash-modules" -> hashModulesPattern = iter.nextRequired("--hash-modules");
-                        case "--module-path" -> modulePath = iter.nextRequired("--module-path");
-                        case "--help" -> throw new HelpRequestedException();
-                        case "--version" -> throw new VersionRequestedException();
-                        default -> {
+                        case "--create":
+                            operation = Operation.CREATE;
+                            break;
+                        case "--extract":
+                            operation = Operation.EXTRACT;
+                            break;
+                        case "--list":
+                            operation = Operation.LIST;
+                            break;
+                        case "--update":
+                            operation = Operation.UPDATE;
+                            break;
+                        case "--convert":
+                            operation = Operation.CONVERT;
+                            break;
+                        case "--tree":
+                            operation = Operation.TREE;
+                            break;
+                        case "--verbose":
+                            verbose = true;
+                            break;
+                        case "--no-compress":
+                            noCompress = true;
+                            break;
+                        case "--no-manifest":
+                            noManifest = true;
+                            break;
+                        case "--file":
+                            archiveFile = iter.nextRequired("--file");
+                            break;
+                        case "--manifest":
+                            manifestFile = iter.nextRequired("--manifest");
+                            break;
+                        case "--main-class":
+                            mainClass = iter.nextRequired("--main-class");
+                            break;
+                        case "--release":
+                            releaseVersion = iter.nextRequired("--release");
+                            break;
+                        case "--module-version":
+                            moduleVersion = iter.nextRequired("--module-version");
+                            break;
+                        case "--hash-modules":
+                            hashModulesPattern = iter.nextRequired("--hash-modules");
+                            break;
+                        case "--module-path":
+                            modulePath = iter.nextRequired("--module-path");
+                            break;
+                        case "--help":
+                            throw new HelpRequestedException();
+                        case "--version":
+                            throw new VersionRequestedException();
+                        default: {
                             if (arg.startsWith("--file=")) {
                                 archiveFile = arg.substring(7);
                             } else if (arg.startsWith("--manifest=")) {
@@ -196,26 +232,43 @@ public final class JarzArgumentParser {
                     for (int i = 0; i < flags.length(); i++) {
                         char flag = flags.charAt(i);
                         switch (flag) {
-                            case 'c' -> operation = Operation.CREATE;
-                            case 'x' -> operation = Operation.EXTRACT;
-                            case 't' -> operation = Operation.LIST;
-                            case 'u' -> operation = Operation.UPDATE;
-                            case 'v' -> verbose = true;
-                            case '0' -> noCompress = true;
-                            case 'M' -> noManifest = true;
-                            case 'f' -> {
+                            case 'c':
+                                operation = Operation.CREATE;
+                                break;
+                            case 'x':
+                                operation = Operation.EXTRACT;
+                                break;
+                            case 't':
+                                operation = Operation.LIST;
+                                break;
+                            case 'u':
+                                operation = Operation.UPDATE;
+                                break;
+                            case 'v':
+                                verbose = true;
+                                break;
+                            case '0':
+                                noCompress = true;
+                                break;
+                            case 'M':
+                                noManifest = true;
+                                break;
+                            case 'f': {
                                 // -f can be anywhere in combined flags, get next arg
                                 archiveFile = iter.nextRequired("-f");
+                                break;
                             }
-                            case 'm' -> {
+                            case 'm': {
                                 // -m can be anywhere in combined flags, get next arg  
                                 manifestFile = iter.nextRequired("-m");
+                                break;
                             }
-                            case 'e' -> {
+                            case 'e': {
                                 // -e can be anywhere in combined flags, get next arg
                                 mainClass = iter.nextRequired("-e");
+                                break;
                             }
-                            case 'C' -> {
+                            case 'C': {
                                 // -C can be anywhere in combined flags, get next arg
                                 String dir = iter.nextRequired("-C");
                                 List<String> files = new ArrayList<>();
@@ -224,9 +277,12 @@ public final class JarzArgumentParser {
                                     files.add(iter.next());
                                 }
                                 directoryChanges.add(new DirectoryChange(dir, files));
+                                break;
                             }
-                            case 'h' -> throw new HelpRequestedException();
-                            default -> throw new IllegalArgumentException("Unknown flag: -" + flag);
+                            case 'h':
+                                throw new HelpRequestedException();
+                            default:
+                                throw new IllegalArgumentException("Unknown flag: -" + flag);
                         }
                     }
                 }
@@ -238,7 +294,7 @@ public final class JarzArgumentParser {
         
         // Validation
         if (operation == null) {
-            throw new IllegalArgumentException("No operation specified (use -c, -x, -t, -u, or --convert)");
+            throw new IllegalArgumentException("No operation specified (use -c, -x, -t, -u, --convert, or --tree)");
         }
         
         if (archiveFile == null && (operation == Operation.CREATE || operation == Operation.EXTRACT || 

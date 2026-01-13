@@ -25,5 +25,9 @@ public final class BlockIndex {
         return entries.values();
     }
     
+    public Collection<Entry> getEntries() {
+        return entries.values();
+    }
+    
     public record Entry(int blockId, long offset, int compressedSize, int uncompressedSize) {}
 }

@@ -1,6 +1,7 @@
 package jdk.incubator.jarz.tools;
 
 import jdk.incubator.jarz.classloader.JarzClassLoader;
+import jdk.incubator.jarz.classloader.JarzApplicationClassLoader;
 import jdk.incubator.jarz.v2.BlockReader;
 import jdk.incubator.jarz.v2.JarToJarzConverter;
 import org.junit.jupiter.api.*;
@@ -448,7 +449,7 @@ class JarzCliTest {
         JarzCli.run(new String[]{"-cf", jarzFile.toString(), "-C", classesDir.toString(), "."});
         
         // Validate classes can be loaded from created JARZ
-        try (JarzClassLoader loader = new JarzClassLoader(jarzFile)) {
+        try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(jarzFile)) {
             Class<?> testClass = loader.loadClass("TestClass");
             Object instance = testClass.getDeclaredConstructor().newInstance();
             String result = (String) testClass.getMethod("getMessage").invoke(instance);
@@ -465,7 +466,7 @@ class JarzCliTest {
         JarzCli.run(new String[]{"--convert", jarFile.toString(), jarzFile.toString()});
         
         // Validate classes can be loaded from converted JARZ
-        try (JarzClassLoader loader = new JarzClassLoader(jarzFile)) {
+        try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(jarzFile)) {
             Class<?> testClass = loader.loadClass("ConvertTest");
             Object instance = testClass.getDeclaredConstructor().newInstance();
             String result = (String) testClass.getMethod("getMessage").invoke(instance);
@@ -487,7 +488,7 @@ class JarzCliTest {
         assertThat(extractedClass).exists();
         
         // Load extracted class to verify it's functional
-        try (JarzClassLoader loader = new JarzClassLoader(jarzFile)) {
+        try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(jarzFile)) {
             Class<?> testClass = loader.loadClass("extract.ExtractTest");
             Object instance = testClass.getDeclaredConstructor().newInstance();
             String result = (String) testClass.getMethod("getMessage").invoke(instance);

@@ -25,5 +25,9 @@ public final class ClassIndex {
         return entries.keySet();
     }
     
+    public Collection<Entry> getEntries() {
+        return entries.values();
+    }
+    
     public record Entry(String className, int blockId, int offsetInBlock, int size) {}
 }

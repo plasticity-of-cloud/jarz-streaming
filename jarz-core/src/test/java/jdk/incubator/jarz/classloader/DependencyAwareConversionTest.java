@@ -83,7 +83,7 @@ class DependencyAwareConversionTest {
             System.out.println("JARZ size: " + Files.size(jarzFile) + " bytes");
             
             // Step 2: Test offline ClassLoader with converted JARZ
-            try (JarzClassLoader loader = new JarzClassLoader(jarzFile)) {
+            try (SimpleJarzClassLoader loader = new SimpleJarzClassLoader(jarzFile)) {
                 // Test loading the same classes as CDN test
                 System.out.println("Testing class loading from offline JARZ...");
                 

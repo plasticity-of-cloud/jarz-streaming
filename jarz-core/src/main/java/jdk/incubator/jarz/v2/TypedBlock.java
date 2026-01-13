@@ -60,5 +60,19 @@ public final class TypedBlock {
         return result;
     }
     
-    public record Entry(String name, byte[] data, int offsetInBlock) {}
+    public static final class Entry {
+        private final String name;
+        private final byte[] data;
+        private final int offsetInBlock;
+        
+        public Entry(String name, byte[] data, int offsetInBlock) {
+            this.name = name;
+            this.data = data;
+            this.offsetInBlock = offsetInBlock;
+        }
+        
+        public String name() { return name; }
+        public byte[] data() { return data; }
+        public int offsetInBlock() { return offsetInBlock; }
+    }
 }

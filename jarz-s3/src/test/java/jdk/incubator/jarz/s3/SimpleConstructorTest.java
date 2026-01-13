@@ -3,6 +3,7 @@ package jdk.incubator.jarz.s3;
 import jdk.incubator.jarz.classloader.JarzClassLoader;
 import jdk.incubator.jarz.v2.JarzDataProvider;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.io.IOException;
 
@@ -38,7 +39,7 @@ public class SimpleConstructorTest {
         // The key test: verify the constructor exists and can be called
         // We expect it to fail on format validation, not on missing constructor
         IOException exception = assertThrows(IOException.class, () -> {
-            try (JarzClassLoader loader = new JarzClassLoader(dataProvider, Thread.currentThread().getContextClassLoader())) {
+            try (S3JarzClassLoader loader = new S3JarzClassLoader(S3Client.create(), "test-bucket", "test-key")) {
                 // Should not reach here due to invalid format
             }
         });

@@ -1,0 +1,13 @@
+{
+  "FirstName": "Your",
+  "LastName": "Name",
+  "ContactType": "PERSON",
+  "OrganizationName": "Plasticity.Cloud",
+  "AddressLine1": "123 Main Street",
+  "City": "Your City",
+  "State": "Your State",
+  "CountryCode": "US",
+  "ZipCode": "12345",
+  "PhoneNumber": "+1.5551234567",
+  "Email": "admin@yourdomain.com"
+}

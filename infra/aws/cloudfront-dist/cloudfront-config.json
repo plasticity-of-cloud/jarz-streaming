@@ -1,0 +1,79 @@
+{
+  "CallerReference": "jarz-cdn-distribution-2026",
+  "Aliases": {
+    "Quantity": 1,
+    "Items": ["cdn.jarz.io"]
+  },
+  "DefaultRootObject": "index.html",
+  "Comment": "JARZ Distribution CDN - Optimized for block-based streaming",
+  "Enabled": true,
+  "Origins": {
+    "Quantity": 1,
+    "Items": [
+      {
+        "Id": "jarz-s3-origin",
+        "DomainName": "jarz-distribution-files.s3.amazonaws.com",
+        "S3OriginConfig": {
+          "OriginAccessIdentity": "origin-access-identity/cloudfront/E1234567890ABC"
+        }
+      }
+    ]
+  },
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "jarz-s3-origin",
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "MinTTL": 0,
+    "DefaultTTL": 86400,
+    "MaxTTL": 31536000,
+    "ForwardedValues": {
+      "QueryString": false,
+      "Cookies": {
+        "Forward": "none"
+      },
+      "Headers": {
+        "Quantity": 1,
+        "Items": ["Range"]
+      }
+    },
+    "TrustedSigners": {
+      "Enabled": false,
+      "Quantity": 0
+    },
+    "Compress": true
+  },
+  "CacheBehaviors": {
+    "Quantity": 1,
+    "Items": [
+      {
+        "PathPattern": "*.jarz",
+        "TargetOriginId": "jarz-s3-origin",
+        "ViewerProtocolPolicy": "https-only",
+        "MinTTL": 0,
+        "DefaultTTL": 31536000,
+        "MaxTTL": 31536000,
+        "ForwardedValues": {
+          "QueryString": false,
+          "Cookies": {
+            "Forward": "none"
+          },
+          "Headers": {
+            "Quantity": 3,
+            "Items": ["Range", "If-Range", "If-Modified-Since"]
+          }
+        },
+        "TrustedSigners": {
+          "Enabled": false,
+          "Quantity": 0
+        },
+        "Compress": false
+      }
+    ]
+  },
+  "ViewerCertificate": {
+    "CloudFrontDefaultCertificate": false,
+    "ACMCertificateArn": "arn:aws:acm:us-east-1:ACCOUNT:certificate/CERTIFICATE-ID",
+    "SSLSupportMethod": "sni-only",
+    "MinimumProtocolVersion": "TLSv1.2_2021"
+  },
+  "PriceClass": "PriceClass_All"
+}

@@ -7,6 +7,7 @@ import io.airlift.compress.zstd.ZstdDecompressor;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
@@ -23,20 +24,37 @@ public class DictionaryTrainer {
     private final ZstdCompressor compressor = new ZstdCompressor();
     private final ZstdDecompressor decompressor = new ZstdDecompressor();
     
-    public record TrainingResult(
-        byte[] dictionary,
-        int sampleCount,
-        double avgCompressionRatio,
-        Map<String, Double> perCategoryRatio,
-        ValidationMetrics validation
-    ) {}
+    public static class TrainingResult {
+        public final byte[] dictionary;
+        public final int sampleCount;
+        public final double avgCompressionRatio;
+        public final Map<String, Double> perCategoryRatio;
+        public final ValidationMetrics validation;
+        
+        public TrainingResult(byte[] dictionary, int sampleCount, double avgCompressionRatio, 
+                            Map<String, Double> perCategoryRatio, ValidationMetrics validation) {
+            this.dictionary = dictionary;
+            this.sampleCount = sampleCount;
+            this.avgCompressionRatio = avgCompressionRatio;
+            this.perCategoryRatio = perCategoryRatio;
+            this.validation = validation;
+        }
+    }
     
-    public record ValidationMetrics(
-        double baselineRatio,
-        double dictionaryRatio,
-        double improvement,
-        int validationSamples
-    ) {}
+    public static class ValidationMetrics {
+        public final double baselineRatio;
+        public final double dictionaryRatio;
+        public final double improvement;
+        public final int validationSamples;
+        
+        public ValidationMetrics(double baselineRatio, double dictionaryRatio, 
+                               double improvement, int validationSamples) {
+            this.baselineRatio = baselineRatio;
+            this.dictionaryRatio = dictionaryRatio;
+            this.improvement = improvement;
+            this.validationSamples = validationSamples;
+        }
+    }
     
     /**
      * Train dictionary on class files from multiple sources.
@@ -161,7 +179,7 @@ public class DictionaryTrainer {
         List<Map.Entry<String, Integer>> sorted = patternFreq.entrySet().stream()
             .filter(e -> e.getValue() >= 3) // Minimum frequency
             .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-            .toList();
+            .collect(Collectors.toList());
         
         // Build dictionary from top patterns
         StringBuilder dictBuilder = new StringBuilder();

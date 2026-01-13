@@ -270,7 +270,7 @@
     },
     "exampleUsage": {
       "type": "string",
-      "value": "[concat('// Java code example for Azure Front Door:\nString jarzUrl = \"https://', reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorName'), variables('frontDoorEndpointName'))).hostName, '/', parameters('containerName'), '/app.jarz\";\ntry (CdnJarzClassLoader loader = new CdnJarzClassLoader(jarzUrl)) {\n    Class<?> clazz = loader.loadClass(\"com.example.MyClass\");\n}')]"
+      "value": "[concat('// Java code example for Azure Front Door:\\nString jarzUrl = \\\"https://', reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorName'), variables('frontDoorEndpointName'))).hostName, '/', parameters('containerName'), '/app.jarz\\\";\\ntry (CdnJarzClassLoader loader = new CdnJarzClassLoader(jarzUrl)) {\\n    Class<?> clazz = loader.loadClass(\\\"com.example.MyClass\\\");\\n}')]"
     }
   }
 }

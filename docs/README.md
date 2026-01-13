@@ -12,6 +12,14 @@
   - [Phase-10-FFM-Valhalla-Integration.md](project-management/cdn-classloader/Phase-10-FFM-Valhalla-Integration.md) - FFM and Valhalla integration planning
   - [Virtual-Thread-HTTP-Optimizations.md](project-management/cdn-classloader/Virtual-Thread-HTTP-Optimizations.md) - Virtual thread optimizations for HTTP/2
 
+### User Guides
+- [JARZ-CLI-User-Guide.md](user-guides/JARZ-CLI-User-Guide.md) - Complete command-line interface guide
+- [JARZ-Migration-Guide.md](user-guides/JARZ-Migration-Guide.md) - Comprehensive guide for migrating Java applications to JARZ ClassLoaders
+- [Converting-Complex-Applications-Kafka-Example.md](user-guides/Converting-Complex-Applications-Kafka-Example.md) - Complete example of converting Apache Kafka to run entirely on JARZ
+
+### Proposals
+- [JARZ LSP Integration](proposals/jarz-lsp-integration/) - Revolutionary Java development via streaming dependencies
+
 ### Technical Specifications
 - [JEP-ZSTD-ClassLoader.md](technical-specs/JEP-ZSTD-ClassLoader.md) - Complete JEP specification for ZSTD-compressed class archives
 - [JARZ-v2-Block-Format-Specification.md](technical-specs/JARZ-v2-Block-Format-Specification.md) - JARZ v2 block-based format specification

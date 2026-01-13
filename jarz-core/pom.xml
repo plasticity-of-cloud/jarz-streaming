@@ -30,62 +30,11 @@
 
     <build>
         <plugins>
-            <!-- Multi-Release JAR compilation -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <executions>
-                    <!-- Java 21 specific compilation -->
-                    <execution>
-                        <id>compile-java21</id>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                        <configuration>
-                            <release>21</release>
-                            <compileSourceRoots>
-                                <compileSourceRoot>${project.basedir}/src/main/java21</compileSourceRoot>
-                            </compileSourceRoots>
-                            <multiReleaseOutput>true</multiReleaseOutput>
-                        </configuration>
-                    </execution>
-                    <!-- Java 21 test compilation -->
-                    <execution>
-                        <id>testCompile-java21</id>
-                        <phase>test-compile</phase>
-                        <goals>
-                            <goal>testCompile</goal>
-                        </goals>
-                        <configuration>
-                            <release>21</release>
-                            <compileSourceRoots>
-                                <compileSourceRoot>${project.basedir}/src/test/java21</compileSourceRoot>
-                            </compileSourceRoots>
-                            <outputDirectory>${project.build.directory}/test-classes-java21</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            
-            <!-- Multi-Release JAR packaging -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.3.0</version>
-                <configuration>
-                    <archive>
-                        <manifestEntries>
-                            <Multi-Release>true</Multi-Release>
-                        </manifestEntries>
-                    </archive>
-                </configuration>
-            </plugin>
-
             <!-- Copy dependencies for integration tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.6.1</version>
+                <version>3.9.0</version>
                 <executions>
                     <execution>
                         <id>copy-test-jars</id>
@@ -98,7 +47,7 @@
                                 <artifactItem>
                                     <groupId>org.apache.logging.log4j</groupId>
                                     <artifactId>log4j-api</artifactId>
-                                    <version>2.20.0</version>
+                                    <version>2.25.3</version>
                                     <type>jar</type>
                                     <outputDirectory>${project.build.directory}/test-jars</outputDirectory>
                                     <destFileName>log4j-api-2.20.0.jar</destFileName>
@@ -110,4 +59,53 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Multi-Release JAR support for Java 21+ -->
+        <profile>
+            <id>java21-multirelease</id>
+            <activation>
+                <jdk>[21,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <!-- Multi-Release JAR compilation -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <executions>
+                            <!-- Java 21 specific compilation -->
+                            <execution>
+                                <id>compile-java21</id>
+                                <goals>
+                                    <goal>compile</goal>
+                                </goals>
+                                <configuration>
+                                    <release>21</release>
+                                    <compileSourceRoots>
+                                        <compileSourceRoot>${project.basedir}/src/main/java21</compileSourceRoot>
+                                    </compileSourceRoots>
+                                    <multiReleaseOutput>true</multiReleaseOutput>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                    <!-- Multi-Release JAR packaging -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <configuration>
+                            <archive>
+                                <manifestEntries>
+                                    <Multi-Release>true</Multi-Release>
+                                </manifestEntries>
+                            </archive>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

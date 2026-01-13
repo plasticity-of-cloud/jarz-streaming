@@ -1,6 +1,7 @@
 package jdk.incubator.jarz.classloader;
 
 import jdk.incubator.jarz.v2.BlockReader;
+import jdk.incubator.jarz.v2.FileJarzDataProvider;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -15,11 +16,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.Manifest;
 
 /**
- * Application ClassLoader implementation for JARZ archives with Main-Class support.
+ * Application ClassLoader implementation for JARZ archives with Main-Class support and bundle index.
  * 
  * <p>This ClassLoader extends {@link JarzClassLoader} and adds application-specific
  * functionality including Main-Class requirement and validation. It provides
  * drop-in compatibility with standard JAR files for application loading.
+ * 
+ * <p>Supports bundle index for efficient multi-JARZ class loading with O(1) lookup
+ * across multiple JARZ files in the same directory.
  * 
  * <p>This enables {@code java -jarz MyApp.jarz} to work identically to {@code java -jar MyApp.jar}.
  * 
@@ -33,6 +37,17 @@ import java.util.jar.Manifest;
  * }
  * }</pre>
  * 
+ * <h2>Bundle Index Example</h2>
+ * <pre>{@code
+ * // With bundle index for multi-JARZ support
+ * try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(
+ *         Paths.get("app.jarz"), 
+ *         Paths.get("bundle.index"))) {
+ *     // Can load classes from any JARZ file listed in bundle index
+ *     Class<?> mainClass = loader.loadClass("kafka.Kafka"); // O(1) lookup
+ * }
+ * }</pre>
+ * 
  * @author Plasticity.Cloud
  * @since 1.0
  */
@@ -40,6 +55,8 @@ public final class JarzApplicationClassLoader extends JarzClassLoader {
     
     // Application-specific components
     private final String mainClassName;
+    private final Path baseDirectory;
+    private final Path jarzPath;
     
     /**
      * Creates a new JarzApplicationClassLoader for the specified JARZ archive.
@@ -54,24 +71,45 @@ public final class JarzApplicationClassLoader extends JarzClassLoader {
      * @since 1.0
      */
     public JarzApplicationClassLoader(Path jarzFile) throws IOException {
-        this(jarzFile, getSystemClassLoader());
+        this(jarzFile, null, getSystemClassLoader());
     }
     
     /**
-     * Creates a new JarzApplicationClassLoader with the specified parent ClassLoader.
+     * Creates a new JarzApplicationClassLoader with bundle index support.
      * 
-     * <p>This constructor requires a valid Main-Class attribute in the manifest
-     * for application loading scenarios.
+     * <p>This constructor enables multi-JARZ class loading with O(1) lookup
+     * across multiple JARZ files listed in the bundle index.
      * 
      * @param jarzFile path to the JARZ archive file, must not be null and must exist
+     * @param bundleIndexPath path to bundle index file, null to disable bundle index
+     * @throws IOException if the JARZ file cannot be read, is corrupted, or lacks Main-Class
+     * @throws IllegalArgumentException if jarzFile is null
+     * @throws SecurityException if a security manager exists and denies read access
+     * @since 1.0
+     */
+    public JarzApplicationClassLoader(Path jarzFile, Path bundleIndexPath) throws IOException {
+        this(jarzFile, bundleIndexPath, getSystemClassLoader());
+    }
+    
+    /**
+     * Creates a new JarzApplicationClassLoader with the specified parent ClassLoader and bundle index.
+     * 
+     * <p>This constructor requires a valid Main-Class attribute in the manifest
+     * for application loading scenarios and supports bundle index for multi-JARZ loading.
+     * 
+     * @param jarzFile path to the JARZ archive file, must not be null and must exist
+     * @param bundleIndexPath path to bundle index file, null to disable bundle index
      * @param parent parent ClassLoader for delegation, must not be null
      * @throws IOException if the JARZ file cannot be read, is corrupted, or lacks Main-Class
      * @throws IllegalArgumentException if jarzFile or parent is null
      * @throws SecurityException if a security manager exists and denies read access
      * @since 1.0
      */
-    public JarzApplicationClassLoader(Path jarzFile, ClassLoader parent) throws IOException {
-        super(jarzFile, parent);
+    public JarzApplicationClassLoader(Path jarzFile, Path bundleIndexPath, ClassLoader parent) throws IOException {
+        super(new FileJarzDataProvider(jarzFile), parent, bundleIndexPath);
+        
+        this.jarzPath = jarzFile;
+        this.baseDirectory = jarzFile.getParent();
         
         // Application ClassLoader requires Main-Class
         String mainClass = manifest.getMainAttributes().getValue("Main-Class");
@@ -79,6 +117,17 @@ public final class JarzApplicationClassLoader extends JarzClassLoader {
             throw new IOException("No Main-Class attribute in manifest");
         }
         this.mainClassName = mainClass.trim();
+    }
+    
+    @Override
+    protected String getCurrentJarzUrl() {
+        return jarzPath.getFileName().toString();
+    }
+    
+    @Override
+    protected JarzClassLoader createChildLoader(String jarzUrl) throws IOException {
+        Path childJarzPath = baseDirectory.resolve(jarzUrl);
+        return new JarzApplicationClassLoader(childJarzPath, null); // No bundle index for children
     }
     
     /**

@@ -1,0 +1,29 @@
+{
+  "Comment": "DNS records for JARZ CDN",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "cdn.DOMAIN_NAME",
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": "DISTRIBUTION_DOMAIN",
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": "Z2FDTNDATAQYW2"
+        }
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "cdn.DOMAIN_NAME",
+        "Type": "AAAA",
+        "AliasTarget": {
+          "DNSName": "DISTRIBUTION_DOMAIN",
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": "Z2FDTNDATAQYW2"
+        }
+      }
+    }
+  ]
+}

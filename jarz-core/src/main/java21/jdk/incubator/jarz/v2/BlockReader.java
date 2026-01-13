@@ -507,6 +507,26 @@ public class BlockReader implements Closeable {
         return crc32.getValue();
     }
     
+    /**
+     * Get the block index for analyzing JARZ structure.
+     * 
+     * @return the block index
+     * @since 1.0
+     */
+    public BlockIndex getBlockIndex() {
+        return blockIndex;
+    }
+    
+    /**
+     * Get the class index for analyzing JARZ structure.
+     * 
+     * @return the class index
+     * @since 1.0
+     */
+    public ClassIndex getClassIndex() {
+        return classIndex;
+    }
+    
     @Override
     public void close() throws IOException {
         if (raf != null) {

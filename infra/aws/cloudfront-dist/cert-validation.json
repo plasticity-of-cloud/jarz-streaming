@@ -1,0 +1,18 @@
+{
+  "Comment": "Add DNS validation record for SSL certificate",
+  "Changes": [
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "_66cc3f94619e341e2b99fea24d4c203f.jarz-streaming.net.",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "_85456c7f1fd6cd1cc1c82476d4622fbb.jkddzztszm.acm-validations.aws."
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,88 +1,57 @@
-# JARZ CDN Infrastructure
+# JARZ Infrastructure
 
-This folder contains Infrastructure as Code (IaC) templates for deploying CDN infrastructure to serve JARZ archives across different cloud providers.
+Multi-cloud infrastructure for JARZ distribution with CDN support across AWS, Azure, GCP, and Oracle Cloud.
 
 ## Structure
 
 ```
 infra/
 ├── aws/
-│   ├── cloudformation/
-│   │   └── jarz-cdn-stack.yaml      # CloudFront + S3 origin
-│   └── terraform/
-│       └── main.tf                   # (TODO) Terraform alternative
+│   ├── cloudfront-dist/           # CloudFront flat-rate plans (recommended)
+│   ├── cloudformation/            # CloudFormation templates
+│   └── terraform/                 # Terraform configurations
 ├── azure/
-│   ├── arm/
-│   │   └── jarz-cdn-template.json   # Front Door + Blob Storage
-│   └── terraform/
-│       └── main.tf                   # (TODO) Terraform alternative
-└── gcp/
-    └── terraform/
-        └── main.tf                   # Cloud CDN + GCS
+│   ├── arm/                       # Azure Resource Manager templates
+│   └── terraform/                 # Terraform configurations
+├── gcp/                           # Google Cloud Platform
+└── oracle-cloud/                  # Oracle Cloud Infrastructure
 ```
 
 ## Quick Start
 
-### AWS CloudFront
-
+### AWS CloudFront (Recommended)
 ```bash
-aws cloudformation deploy \
-  --template-file aws/cloudformation/jarz-cdn-stack.yaml \
-  --stack-name jarz-cdn \
-  --parameter-overrides BucketName=my-jarz-bucket
+cd infra/aws/cloudfront-dist
+./deploy.sh your-domain.com Business
 ```
 
-### Azure Front Door
-
+### Azure CDN
 ```bash
-az deployment group create \
-  --resource-group my-rg \
-  --template-file azure/arm/jarz-cdn-template.json \
-  --parameters storageAccountName=myjarzaccount frontDoorName=my-jarz-cdn
+cd infra/azure/arm
+# See Azure-specific README
 ```
 
-### Google Cloud CDN
+## Cloud Provider Comparison
 
-```bash
-cd gcp/terraform
-terraform init
-terraform apply -var="project_id=my-project" -var="bucket_name=my-jarz-bucket"
-```
+| Provider | CDN Service | Flat-Rate Plans | JARZ Optimized |
+|----------|-------------|-----------------|----------------|
+| **AWS** | CloudFront | ✅ Yes | ✅ Yes |
+| **Azure** | Azure CDN | ❌ Pay-per-use | ✅ Yes |
+| **GCP** | Cloud CDN | ❌ Pay-per-use | ⚠️ Partial |
+| **Oracle** | OCI CDN | ❌ Pay-per-use | ⚠️ Partial |
 
-## Usage with CdnJarzClassLoader
+## AWS CloudFront Features (Recommended)
 
-After deploying, use the output URL with the ClassLoader:
+- **Flat-Rate Plans**: $0-$1000/month with no overages
+- **JARZ-Optimized**: Range request support for block streaming
+- **Security**: WAF protection, DDoS mitigation, HTTPS-only
+- **Performance**: 750+ global edge locations
+- **Monitoring**: CloudWatch integration with alerts
 
-```java
-// AWS (from CloudFormation output: JarzBaseUrl)
-new CdnJarzClassLoader("https://d1234abcd.cloudfront.net/app.jarz");
+## Multi-Cloud Strategy
 
-// Azure (from ARM output: jarzBaseUrl)
-new CdnJarzClassLoader("https://my-jarz-cdn-endpoint.azurefd.net/app.jarz");
-
-// GCP (configure DNS to point to cdn_ip_address)
-new CdnJarzClassLoader("https://jarz.my-project.example.com/app.jarz");
-```
-
-## Features by Provider
-
-| Feature | AWS CloudFront | Azure Front Door | GCP Cloud CDN |
-|---------|---------------|------------------|---------------|
-| HTTP/2 | ✅ | ✅ | ✅ |
-| HTTP/3 (QUIC) | ✅ | ✅ | ✅ |
-| Range request caching | ✅ | ✅ | ✅ |
-| Flat-rate pricing | ✅ Savings Bundle | ❌ | ❌ |
-| Edge locations | 600+ | 192+ | 200+ |
-
-## Cost Optimization
-
-### AWS CloudFront Security Savings Bundle
-
-For high-volume JARZ streaming, consider the CloudFront Security Savings Bundle:
-
-| Commitment | Monthly Cost | Included |
-|------------|--------------|----------|
-| 1 TB/month | $35 | Data transfer + requests |
-| 10 TB/month | $300 | Data transfer + requests |
-
-This provides predictable costs compared to pay-per-request pricing.
+Choose based on your requirements:
+- **Cost Predictability**: AWS CloudFront flat-rate plans
+- **Azure Integration**: Azure CDN with existing Azure services
+- **Global Reach**: AWS CloudFront (largest edge network)
+- **Hybrid Setup**: Multiple providers for redundancy
