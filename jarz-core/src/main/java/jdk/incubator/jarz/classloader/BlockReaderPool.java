@@ -1,6 +1,8 @@
 package jdk.incubator.jarz.classloader;
 
 import jdk.incubator.jarz.v2.BlockReader;
+import jdk.incubator.jarz.v2.JarzDataProvider;
+import jdk.incubator.jarz.v2.FileJarzDataProvider;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -22,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class BlockReaderPool {
     
-    private static final ConcurrentHashMap<Path, PooledBlockReader> pool = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, PooledBlockReader> pool = new ConcurrentHashMap<>();
     
     /**
      * Acquire a BlockReader for the specified JARZ file.
@@ -35,18 +37,40 @@ public final class BlockReaderPool {
      * @throws IOException if the JARZ file cannot be read
      */
     public static BlockReader acquire(Path jarzFile) throws IOException {
-        return pool.compute(jarzFile, (path, existing) -> {
+        String key = jarzFile.normalize().toAbsolutePath().toString();
+        return pool.compute(key, (k, existing) -> {
             if (existing != null) {
                 existing.incrementRef();
                 return existing;
             } else {
                 try {
-                    return new PooledBlockReader(new BlockReader(path));
+                    return new PooledBlockReader(new BlockReader(jarzFile), key);
                 } catch (IOException e) {
-                    throw new RuntimeException("Failed to create BlockReader for " + path, e);
+                    throw new RuntimeException("Failed to create BlockReader for " + jarzFile, e);
                 }
             }
         }).getBlockReader();
+    }
+    
+    /**
+     * Acquire a BlockReader for the specified data provider.
+     * 
+     * <p>For FileJarzDataProvider, uses file-based pooling. For other providers,
+     * creates a unique key based on provider characteristics.
+     * 
+     * @param dataProvider data provider for JARZ access
+     * @return shared BlockReader instance (for file providers) or new instance (for remote providers)
+     * @throws IOException if the JARZ data cannot be read
+     */
+    public static BlockReader acquire(JarzDataProvider dataProvider) throws IOException {
+        if (dataProvider instanceof FileJarzDataProvider) {
+            // Use file-based pooling for local files
+            FileJarzDataProvider fileProvider = (FileJarzDataProvider) dataProvider;
+            return acquire(fileProvider.getFilePath());
+        } else {
+            // For remote providers, create unique instances (no pooling benefit)
+            return new BlockReader(dataProvider);
+        }
     }
     
     /**
@@ -60,14 +84,36 @@ public final class BlockReaderPool {
      * @throws IOException if the BlockReader cannot be closed
      */
     public static void release(Path jarzFile) throws IOException {
-        PooledBlockReader pooled = pool.computeIfPresent(jarzFile, (path, existing) -> {
+        String key = jarzFile.normalize().toAbsolutePath().toString();
+        release(key);
+    }
+    
+    /**
+     * Release a BlockReader for the specified data provider.
+     * 
+     * @param dataProvider data provider that was used to acquire the BlockReader
+     * @throws IOException if the BlockReader cannot be closed
+     */
+    public static void release(JarzDataProvider dataProvider) throws IOException {
+        if (dataProvider instanceof FileJarzDataProvider) {
+            FileJarzDataProvider fileProvider = (FileJarzDataProvider) dataProvider;
+            release(fileProvider.getFilePath());
+        }
+        // Remote providers don't use pooling, so no release needed
+    }
+    
+    /**
+     * Internal release method using string key.
+     */
+    private static void release(String key) throws IOException {
+        PooledBlockReader pooled = pool.computeIfPresent(key, (k, existing) -> {
             int newCount = existing.decrementRef();
             return newCount > 0 ? existing : null;
         });
         
         // If removed from pool (ref count reached 0), close the BlockReader
         if (pooled == null) {
-            PooledBlockReader removed = pool.remove(jarzFile);
+            PooledBlockReader removed = pool.remove(key);
             if (removed != null) {
                 removed.close();
             }
@@ -102,10 +148,12 @@ public final class BlockReaderPool {
     private static final class PooledBlockReader {
         private final BlockReader blockReader;
         private final AtomicInteger refCount;
+        private final String poolKey;
         
-        PooledBlockReader(BlockReader blockReader) {
+        PooledBlockReader(BlockReader blockReader, String poolKey) {
             this.blockReader = blockReader;
             this.refCount = new AtomicInteger(1);
+            this.poolKey = poolKey;
         }
         
         BlockReader getBlockReader() {
@@ -126,6 +174,10 @@ public final class BlockReaderPool {
         
         int getRefCount() {
             return refCount.get();
+        }
+        
+        String getPoolKey() {
+            return poolKey;
         }
     }
 }

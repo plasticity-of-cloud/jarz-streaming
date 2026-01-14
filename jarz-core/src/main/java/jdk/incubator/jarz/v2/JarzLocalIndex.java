@@ -407,6 +407,15 @@ public class JarzLocalIndex {
     }
     
     /**
+     * Convert this local index to a bundle index containing just this JARZ.
+     */
+    public JarzBundleIndex toBundleIndex() {
+        JarzBundleIndex bundleIndex = new JarzBundleIndex();
+        bundleIndex.addJarzIndex(originalJarzUrl, this);
+        return bundleIndex;
+    }
+    
+    /**
      * Load bundle index from a file.
      */
     public static JarzBundleIndex loadBundle(Path bundlePath) throws IOException {

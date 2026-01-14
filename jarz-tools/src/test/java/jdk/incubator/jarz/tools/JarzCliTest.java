@@ -1,6 +1,5 @@
 package jdk.incubator.jarz.tools;
 
-import jdk.incubator.jarz.classloader.JarzClassLoader;
 import jdk.incubator.jarz.classloader.JarzApplicationClassLoader;
 import jdk.incubator.jarz.v2.BlockReader;
 import jdk.incubator.jarz.v2.JarToJarzConverter;
@@ -441,12 +440,16 @@ class JarzCliTest {
     
     @Test
     void testCreatedJarzCanLoadClasses() throws Exception {
-        // Create JARZ with test class
+        // Create JARZ with test class and manifest
         Path classesDir = tempDir.resolve("classes");
         createCompiledClass("TestClass", classesDir);
         
+        // Create manifest with Main-Class
+        Path manifestFile = tempDir.resolve("manifest.txt");
+        Files.writeString(manifestFile, "Main-Class: TestClass\n");
+        
         Path jarzFile = tempDir.resolve("test.jarz");
-        JarzCli.run(new String[]{"-cf", jarzFile.toString(), "-C", classesDir.toString(), "."});
+        JarzCli.run(new String[]{"-cfm", jarzFile.toString(), manifestFile.toString(), "-C", classesDir.toString(), "."});
         
         // Validate classes can be loaded from created JARZ
         try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(jarzFile)) {
@@ -459,10 +462,20 @@ class JarzCliTest {
     
     @Test
     void testConvertedJarzCanLoadClasses() throws Exception {
-        // Create JAR and convert to JARZ - use simple class without package
+        // Create JAR with manifest and convert to JARZ
         Path jarFile = createTestJar("", "ConvertTest");
-        Path jarzFile = tempDir.resolve("converted.jarz");
         
+        // Add manifest to JAR
+        Path manifestFile = tempDir.resolve("manifest.txt");
+        Files.writeString(manifestFile, "Main-Class: ConvertTest\n");
+        
+        // Update JAR with manifest
+        ProcessBuilder pb = new ProcessBuilder("jar", "ufm", jarFile.toString(), manifestFile.toString());
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        process.waitFor();
+        
+        Path jarzFile = tempDir.resolve("converted.jarz");
         JarzCli.run(new String[]{"--convert", jarFile.toString(), jarzFile.toString()});
         
         // Validate classes can be loaded from converted JARZ
@@ -476,10 +489,20 @@ class JarzCliTest {
     
     @Test
     void testExtractedClassesAreFunctional() throws Exception {
-        // Create and extract JARZ
+        // Create JAR with manifest and convert to JARZ
         Path jarFile = createTestJar("extract", "ExtractTest");
-        Path jarzFile = tempDir.resolve("test.jarz");
         
+        // Add manifest to JAR
+        Path manifestFile = tempDir.resolve("manifest.txt");
+        Files.writeString(manifestFile, "Main-Class: extract.ExtractTest\n");
+        
+        // Update JAR with manifest
+        ProcessBuilder pb = new ProcessBuilder("jar", "ufm", jarFile.toString(), manifestFile.toString());
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        process.waitFor();
+        
+        Path jarzFile = tempDir.resolve("test.jarz");
         JarToJarzConverter.convert(jarFile, jarzFile);
         JarzCli.run(new String[]{"-xf", jarzFile.toString()});
         

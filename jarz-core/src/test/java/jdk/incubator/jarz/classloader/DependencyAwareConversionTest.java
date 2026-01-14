@@ -71,6 +71,13 @@ class DependencyAwareConversionTest {
                 blocks.add(resourceBlock);
             }
             
+            // Add manifest with Main-Class for JarzApplicationClassLoader compatibility
+            Block manifestBlock = new Block(blocks.size());
+            String manifestContent = "Manifest-Version: 1.0\n" +
+                                   "Main-Class: org.apache.logging.log4j.LogManager\n\n";
+            manifestBlock.add("META-INF/MANIFEST.MF", manifestContent.getBytes());
+            blocks.add(manifestBlock);
+            
             // Write multi-block JARZ v2
             try (BlockWriter blockWriter = new BlockWriter(jarzFile)) {
                 for (Block block : blocks) {
@@ -83,7 +90,7 @@ class DependencyAwareConversionTest {
             System.out.println("JARZ size: " + Files.size(jarzFile) + " bytes");
             
             // Step 2: Test offline ClassLoader with converted JARZ
-            try (SimpleJarzClassLoader loader = new SimpleJarzClassLoader(jarzFile)) {
+            try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(jarzFile)) {
                 // Test loading the same classes as CDN test
                 System.out.println("Testing class loading from offline JARZ...");
                 

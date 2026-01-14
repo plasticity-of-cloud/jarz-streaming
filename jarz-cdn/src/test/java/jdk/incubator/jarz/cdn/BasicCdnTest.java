@@ -11,6 +11,7 @@ import org.junit.jupiter.api.*;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -155,6 +156,131 @@ public class BasicCdnTest {
             assertNotNull(testClass);
             
             System.out.println("✅ Factory method works correctly");
+        }
+    }
+    
+    @Test
+    @DisplayName("CdnJarzClassLoader should inherit Main-Class support from base class")
+    void testCdnMainClassInheritance() throws Exception {
+        // Create JARZ with Main-Class and serve it via CDN
+        Path mainJarzFile = createJarzWithMainClass();
+        
+        // Update CDN handler to serve the new file
+        cdnServer.stop();
+        cdnServer = Undertow.builder()
+            .addHttpListener(cdnPort, "localhost")
+            .setHandler(new MainClassCdnHandler(mainJarzFile))
+            .build();
+        cdnServer.start();
+        
+        String cdnUrl = "http://localhost:" + cdnPort + "/app-with-main.jarz";
+        
+        try (CdnJarzClassLoader loader = new CdnJarzClassLoader(cdnUrl)) {
+            // Verify inherited Main-Class functionality using reflection
+            // (Direct method calls fail during test compilation due to Maven reactor dependency resolution)
+            Method hasMainClassMethod = loader.getClass().getMethod("hasMainClass");
+            Method getMainClassNameMethod = loader.getClass().getMethod("getMainClassName");
+            
+            assertTrue((Boolean) hasMainClassMethod.invoke(loader), 
+                "CdnJarzClassLoader should inherit hasMainClass()");
+            assertEquals("test.MainApp", (String) getMainClassNameMethod.invoke(loader), 
+                "CdnJarzClassLoader should inherit getMainClassName()");
+        }
+    }
+    
+    private Path createJarzWithMainClass() throws Exception {
+        Path tempDir = Files.createTempDirectory("cdn-main-test");
+        Path jarzFile = tempDir.resolve("app-with-main.jarz");
+        
+        // Create a simple JAR with Main-Class first
+        Path jarFile = tempDir.resolve("app.jar");
+        try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(jarFile))) {
+            // Add manifest with Main-Class
+            JarEntry manifestEntry = new JarEntry("META-INF/MANIFEST.MF");
+            jos.putNextEntry(manifestEntry);
+            String manifestContent = "Manifest-Version: 1.0\n" +
+                                   "Main-Class: test.MainApp\n\n";
+            jos.write(manifestContent.getBytes());
+            jos.closeEntry();
+            
+            // Add a simple class
+            JarEntry classEntry = new JarEntry("test/MainApp.class");
+            jos.putNextEntry(classEntry);
+            jos.write(createSimpleClassBytes());
+            jos.closeEntry();
+        }
+        
+        // Convert JAR to JARZ
+        JarToJarzConverter converter = new JarToJarzConverter();
+        converter.convert(jarFile, jarzFile);
+        
+        return jarzFile;
+    }
+    
+    private byte[] createSimpleClassBytes() {
+        // Minimal valid class bytecode
+        return new byte[]{
+            (byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE, // magic
+            0x00, 0x00, 0x00, 0x3D, // version
+            0x00, 0x0D, // constant pool count
+            0x07, 0x00, 0x02, // Class info
+            0x01, 0x00, 0x10, 0x6A, 0x61, 0x76, 0x61, 0x2F, 0x6C, 0x61, 0x6E, 0x67, 0x2F, 0x4F, 0x62, 0x6A, 0x65, 0x63, 0x74, // java/lang/Object
+            0x00, 0x21, // access flags
+            0x00, 0x01, // this class
+            0x00, 0x02, // super class
+            0x00, 0x00, // interfaces count
+            0x00, 0x00, // fields count
+            0x00, 0x00, // methods count
+            0x00, 0x00  // attributes count
+        };
+    }
+    
+    /**
+     * CDN handler for serving JARZ files with Main-Class.
+     */
+    private static class MainClassCdnHandler implements HttpHandler {
+        private final Path jarzFile;
+        
+        public MainClassCdnHandler(Path jarzFile) {
+            this.jarzFile = jarzFile;
+        }
+        
+        @Override
+        public void handleRequest(HttpServerExchange exchange) throws Exception {
+            String path = exchange.getRequestPath();
+            
+            if (!path.equals("/app-with-main.jarz")) {
+                exchange.setStatusCode(404);
+                return;
+            }
+            
+            byte[] jarzData = Files.readAllBytes(jarzFile);
+            
+            String rangeHeader = exchange.getRequestHeaders().getFirst("Range");
+            if (rangeHeader != null) {
+                // Handle range request
+                Pattern pattern = Pattern.compile("bytes=(\\d+)-(\\d*)");
+                Matcher matcher = pattern.matcher(rangeHeader);
+                if (matcher.matches()) {
+                    int start = Integer.parseInt(matcher.group(1));
+                    int end = matcher.group(2).isEmpty() ? jarzData.length - 1 : Integer.parseInt(matcher.group(2));
+                    
+                    byte[] rangeData = new byte[end - start + 1];
+                    System.arraycopy(jarzData, start, rangeData, 0, rangeData.length);
+                    
+                    exchange.setStatusCode(206);
+                    exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, 
+                        "bytes " + start + "-" + end + "/" + jarzData.length);
+                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(rangeData.length));
+                    exchange.getResponseSender().send(java.nio.ByteBuffer.wrap(rangeData));
+                    return;
+                }
+            }
+            
+            // Full file request
+            exchange.setStatusCode(200);
+            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(jarzData.length));
+            exchange.getResponseSender().send(java.nio.ByteBuffer.wrap(jarzData));
         }
     }
 

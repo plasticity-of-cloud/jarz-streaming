@@ -15,6 +15,7 @@
 ### User Guides
 - [JARZ-CLI-User-Guide.md](user-guides/JARZ-CLI-User-Guide.md) - Complete command-line interface guide
 - [JARZ-Migration-Guide.md](user-guides/JARZ-Migration-Guide.md) - Comprehensive guide for migrating Java applications to JARZ ClassLoaders
+- [ClassLoader-Hierarchy-Migration.md](user-guides/ClassLoader-Hierarchy-Migration.md) - **NEW**: Migration guide for ClassLoader hierarchy refactor
 - [Converting-Complex-Applications-Kafka-Example.md](user-guides/Converting-Complex-Applications-Kafka-Example.md) - Complete example of converting Apache Kafka to run entirely on JARZ
 
 ### Proposals
@@ -23,6 +24,7 @@
 ### Technical Specifications
 - [JEP-ZSTD-ClassLoader.md](technical-specs/JEP-ZSTD-ClassLoader.md) - Complete JEP specification for ZSTD-compressed class archives
 - [JARZ-v2-Block-Format-Specification.md](technical-specs/JARZ-v2-Block-Format-Specification.md) - JARZ v2 block-based format specification
+- [ClassLoader-Hierarchy-Refactor.md](technical-specs/ClassLoader-Hierarchy-Refactor.md) - **COMPLETED**: Unified ClassLoader hierarchy with Main-Class inheritance
 - [ClassLoaderMemoryOptimizationDesign.md](technical-specs/ClassLoaderMemoryOptimizationDesign.md) - 4-phase optimization strategy to reduce ClassLoader memory overhead from 150KB+ to <5KB
 - [CdnClassLoaderMemoryOptimizationDesign.md](technical-specs/CdnClassLoaderMemoryOptimizationDesign.md) - 4-phase optimization strategy for CDN ClassLoader memory reduction
 - [Enhanced-JARZ-CLI-Specification.md](technical-specs/Enhanced-JARZ-CLI-Specification.md) - JAR-compatible CLI tool specification

@@ -84,8 +84,11 @@ final class JarzClasspathResolver implements AutoCloseable {
             throw new IllegalStateException("Resolver closed");
         }
         
+        // Convert class name to path format (com.example.Class -> com/example/Class.class)
+        String classPath = name.replace('.', '/') + ".class";
+        
         for (BlockReader reader : classpathReaders) {
-            byte[] classData = reader.readClass(name);
+            byte[] classData = reader.readEntry(classPath);
             if (classData != null) {
                 return classData;
             }

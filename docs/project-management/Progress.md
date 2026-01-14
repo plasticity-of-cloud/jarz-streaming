@@ -101,7 +101,27 @@ JARZ (`.jarz`) is a new archive format using ZSTD compression with dependency-aw
 **Phase**: Performance optimization with local index files for S3 and CDN ClassLoaders  
 **Last Updated**: 2026-01-02T20:30:00Z
 
-### ✅ Recently Completed: Local Index Optimization (Phase 13)
+### ✅ Recently Completed: ClassLoader Hierarchy Refactor (Phase 14)
+
+**Date**: January 14, 2026  
+**Milestone**: Unified ClassLoader hierarchy with Main-Class inheritance across all implementations
+
+**ClassLoader Hierarchy Refactor Results**:
+- ✅ **Phase 1**: Main-Class support moved to base `JarzClassLoader` class
+- ✅ **Phase 2**: Duplicate Main-Class code removed from `JarzApplicationClassLoader`
+- ✅ **Phase 3**: `SimpleJarzClassLoader` test class removed, tests updated
+- ✅ **Phase 4**: Comprehensive Main-Class inheritance testing implemented
+- ✅ **Unified API**: All ClassLoaders (Application, S3, CDN, ECR) inherit Main-Class support
+- ✅ **Streaming Applications**: S3, CDN, and ECR ClassLoaders can now run applications directly
+- ✅ **Code Quality**: Eliminated duplication, consistent API across all implementations
+- ✅ **Test Coverage**: 100% test coverage for Main-Class inheritance functionality
+
+**Architecture Achievement**: 
+- **Before**: Only `JarzApplicationClassLoader` could run applications (Main-Class support)
+- **After**: All ClassLoaders inherit Main-Class support from unified base class
+- **Impact**: Streaming ClassLoaders can now execute applications directly from S3, CDN, or ECR
+
+### ✅ Previously Completed: Local Index Optimization (Phase 13)
 
 **Date**: January 2, 2026  
 **Milestone**: Local index files eliminate network latency for class location

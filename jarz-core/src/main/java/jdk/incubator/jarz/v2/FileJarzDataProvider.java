@@ -2,6 +2,7 @@ package jdk.incubator.jarz.v2;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -14,10 +15,24 @@ import java.nio.file.Path;
 public class FileJarzDataProvider implements JarzDataProvider {
     private final RandomAccessFile raf;
     private final long fileSize;
+    private final Path filePath;
     
     public FileJarzDataProvider(Path filePath) throws IOException {
+        if (filePath == null) {
+            throw new IllegalArgumentException("File path cannot be null");
+        }
+        
+        if (!Files.exists(filePath)) {
+            throw new IOException("JARZ file not found: " + filePath);
+        }
+        
+        this.filePath = filePath;
         this.raf = new RandomAccessFile(filePath.toFile(), "r");
         this.fileSize = raf.length();
+    }
+    
+    public Path getFilePath() {
+        return filePath;
     }
     
     @Override

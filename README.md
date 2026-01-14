@@ -83,19 +83,43 @@ java -jar jarz-tools/target/jarz-cli.jar -tf app.jarz
 ### Use JARZ ClassLoader
 
 ```java
-// Local file
+// Local file - Application execution
 try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(Paths.get("app.jarz"))) {
+    // Load and execute main class
+    if (loader.hasMainClass()) {
+        String mainClassName = loader.getMainClassName();
+        Class<?> mainClass = loader.loadClass(mainClassName);
+        // Execute main method
+    }
+    
+    // Or load specific classes
     Class<?> clazz = loader.loadClass("com.example.MyClass");
 }
 
-// S3 streaming
+// S3 streaming - Now supports applications! ✨ NEW
 S3Client s3 = S3Client.create();
 try (S3JarzClassLoader loader = new S3JarzClassLoader(s3, "my-bucket", "app.jarz")) {
+    // NEW: Can run applications directly from S3
+    if (loader.hasMainClass()) {
+        String mainClassName = loader.getMainClassName();
+        Class<?> mainClass = loader.loadClass(mainClassName);
+        // Execute main method
+    }
+    
+    // Library loading (unchanged)
     Class<?> clazz = loader.loadClass("com.example.MyClass");
 }
 
-// CDN HTTP/2 streaming (zero dependencies)
+// CDN HTTP/2 streaming - Now supports applications! ✨ NEW
 try (CdnJarzClassLoader loader = new CdnJarzClassLoader("https://d1234.cloudfront.net/app.jarz")) {
+    // NEW: Can run applications directly from CDN
+    if (loader.hasMainClass()) {
+        String mainClassName = loader.getMainClassName();
+        Class<?> mainClass = loader.loadClass(mainClassName);
+        // Execute main method
+    }
+    
+    // Library loading (unchanged)
     Class<?> clazz = loader.loadClass("com.example.MyClass");
 }
 ```
@@ -192,6 +216,7 @@ java -jar jarz-benchmarks/target/jarz-benchmarks.jar
 - [x] JARZ v2 block-based format with dependency analysis
 - [x] S3 streaming ClassLoader (v1 + v2)
 - [x] CDN HTTP/2 ClassLoader with zero dependencies
+- [x] **Unified ClassLoader hierarchy with Main-Class inheritance** ✨ **NEW**
 - [x] Comprehensive test suite (64/64 tests passing)
 - [x] JMH performance benchmarks
 - [x] CLI tools for JARZ creation/extraction (JAR-compatible syntax)

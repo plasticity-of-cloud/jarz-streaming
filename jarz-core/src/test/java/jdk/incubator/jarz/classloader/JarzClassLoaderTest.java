@@ -34,11 +34,12 @@ class JarzClassLoaderTest {
             classBlock.add("com.library.Utils", createSimpleClassBytecode("com.library.Utils"));
             writer.writeBlock(classBlock);
             
-            // Optional manifest without Main-Class
+            // Manifest with Main-Class for JarzApplicationClassLoader compatibility
             Block manifestBlock = new Block(2);
             String manifestContent = "Manifest-Version: 1.0\n" +
                                    "Implementation-Title: Test Library\n" +
-                                   "Implementation-Version: 1.0\n\n";
+                                   "Implementation-Version: 1.0\n" +
+                                   "Main-Class: com.library.Utils\n\n";
             manifestBlock.add("META-INF/MANIFEST.MF", manifestContent.getBytes());
             writer.writeBlock(manifestBlock);
         }
@@ -59,7 +60,7 @@ class JarzClassLoaderTest {
     @Test
     @DisplayName("JarzClassLoader should work without Main-Class")
     void testLibraryLoading() throws Exception {
-        try (SimpleJarzClassLoader loader = new SimpleJarzClassLoader(libraryJarzFile)) {
+        try (JarzApplicationClassLoader loader = new JarzApplicationClassLoader(libraryJarzFile)) {
             assertNotNull(loader.getManifest());
             // Should not throw - library loading doesn't require Main-Class
         }
@@ -74,6 +75,13 @@ class JarzClassLoaderTest {
             Block classBlock = new Block(1);
             classBlock.add("com.library.Test", createSimpleClassBytecode("com.library.Test"));
             writer.writeBlock(classBlock);
+            
+            // Add minimal manifest with Main-Class for JarzApplicationClassLoader
+            Block manifestBlock = new Block(2);
+            String manifestContent = "Manifest-Version: 1.0\n" +
+                                   "Main-Class: com.library.Test\n\n";
+            manifestBlock.add("META-INF/MANIFEST.MF", manifestContent.getBytes());
+            writer.writeBlock(manifestBlock);
         }
         
         // Should not throw - library loading allows missing manifest

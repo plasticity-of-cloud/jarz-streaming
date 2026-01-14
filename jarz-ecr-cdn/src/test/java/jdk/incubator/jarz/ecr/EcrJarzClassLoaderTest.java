@@ -87,4 +87,31 @@ class EcrJarzClassLoaderTest {
             assertEquals("org.springframework.boot.SpringApplication", clazz.getName());
         }
     }
+    
+    @Test
+    @DisplayName("EcrJarzClassLoader should inherit Main-Class support from base class")
+    void testEcrMainClassInheritance() {
+        // Test that ECR ClassLoader has inherited Main-Class methods
+        // Note: This test verifies API inheritance without requiring actual ECR access
+        
+        try {
+            // Verify methods are available (will fail during construction due to no ECR access, but that's expected)
+            EcrJarzClassLoader loader = new EcrJarzClassLoader(TEST_GROUP_ID, TEST_ARTIFACT_ID, TEST_VERSION);
+            
+            // If we get here (unlikely without ECR setup), verify inherited methods exist
+            assertNotNull(loader.getClass().getMethod("hasMainClass"), "Should inherit hasMainClass()");
+            assertNotNull(loader.getClass().getMethod("getMainClassName"), "Should inherit getMainClassName()");
+            
+            loader.close();
+        } catch (Exception e) {
+            // Expected when ECR is not available - just verify the methods exist on the class
+            try {
+                assertNotNull(EcrJarzClassLoader.class.getMethod("hasMainClass"), "Should inherit hasMainClass()");
+                assertNotNull(EcrJarzClassLoader.class.getMethod("getMainClassName"), "Should inherit getMainClassName()");
+                System.out.println("✅ EcrJarzClassLoader inherits Main-Class methods from base class");
+            } catch (NoSuchMethodException nsme) {
+                fail("EcrJarzClassLoader should inherit Main-Class methods from base class");
+            }
+        }
+    }
 }

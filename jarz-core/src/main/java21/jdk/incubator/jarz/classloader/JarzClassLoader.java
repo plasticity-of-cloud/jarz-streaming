@@ -4,11 +4,13 @@ import jdk.incubator.jarz.v2.BlockReader;
 import jdk.incubator.jarz.v2.JarzDataProvider;
 import jdk.incubator.jarz.v2.HttpJarzDataProvider;
 import jdk.incubator.jarz.v2.JarzLocalIndex;
+import jdk.incubator.jarz.v2.JarzLocalIndex.JarzBundleIndex;
 
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.*;
@@ -47,6 +49,9 @@ public abstract class JarzClassLoader extends SecureClassLoader implements AutoC
     protected final ProtectionDomain protectionDomain;
     protected final URL codeSource;
     protected final JarzDataProvider dataProvider;
+    
+    // Main-Class support (optional for library vs application loading)
+    private final String mainClassName; // null for library loading
     
     // Bundle index support for multi-JARZ class loading
     protected JarzLocalIndex.JarzBundleIndex bundleIndex;
@@ -176,6 +181,7 @@ public abstract class JarzClassLoader extends SecureClassLoader implements AutoC
             this.jarzFilePath = jarzFile;
             this.blockReader = BlockReaderPool.acquire(jarzFile);
             this.manifest = ManifestCache.getManifest(jarzFile, blockReader);
+            this.mainClassName = manifest != null ? manifest.getMainAttributes().getValue("Main-Class") : null;
             this.codeSource = jarzFile.toUri().toURL();
             this.protectionDomain = ProtectionDomainFactory.getProtectionDomain(codeSource);
             this.classpathResolver = createClasspathResolver(jarzFile.getParent(), jarzFile);
@@ -207,6 +213,7 @@ public abstract class JarzClassLoader extends SecureClassLoader implements AutoC
             this.jarzFilePath = null; // No local file path for remote sources
             this.blockReader = new BlockReader(dataProvider);
             this.manifest = readManifestFromDataProvider();
+            this.mainClassName = manifest != null ? manifest.getMainAttributes().getValue("Main-Class") : null;
             
             // For remote sources, create a synthetic URL with a valid protocol
             this.codeSource = new URL("file", null, -1, "/remote-jarz");
@@ -241,15 +248,16 @@ public abstract class JarzClassLoader extends SecureClassLoader implements AutoC
             this.jarzFilePath = null; // May not have local file path for remote sources
             this.blockReader = new BlockReader(dataProvider);
             this.manifest = readManifestFromDataProvider();
+            this.mainClassName = manifest != null ? manifest.getMainAttributes().getValue("Main-Class") : null;
             
             // For remote sources, create a synthetic URL with a valid protocol
             this.codeSource = new URL("file", null, -1, "/remote-jarz");
             this.protectionDomain = ProtectionDomainFactory.getProtectionDomain(codeSource);
             this.classpathResolver = null; // No classpath resolution for remote sources
             
-            // Load bundle index if provided
+            // Load index if provided (detect format automatically)
             if (bundleIndexPath != null && Files.exists(bundleIndexPath)) {
-                this.bundleIndex = JarzLocalIndex.loadBundle(bundleIndexPath);
+                this.bundleIndex = loadIndexFile(bundleIndexPath);
             }
         } catch (Exception e) {
             try { close(); } catch (IOException ignored) {}
@@ -257,6 +265,33 @@ public abstract class JarzClassLoader extends SecureClassLoader implements AutoC
                 throw (IOException) e;
             }
             throw new IOException("Failed to initialize JARZ ClassLoader", e);
+        }
+    }
+    
+    /**
+     * Load index file, automatically detecting format (JIDX or JBDX).
+     */
+    private JarzBundleIndex loadIndexFile(Path indexPath) throws IOException {
+        // First, peek at magic bytes to detect format
+        String magicStr;
+        try (FileInputStream fis = new FileInputStream(indexPath.toFile());
+             BufferedInputStream bis = new BufferedInputStream(fis)) {
+            
+            byte[] magic = new byte[4];
+            bis.readNBytes(magic, 0, 4);
+            magicStr = new String(magic, StandardCharsets.UTF_8);
+        }
+        
+        // Load based on detected format
+        if ("JIDX".equals(magicStr)) {
+            // JarzLocalIndex format - load and convert to bundle index
+            JarzLocalIndex localIndex = JarzLocalIndex.load(indexPath);
+            return localIndex.toBundleIndex();
+        } else if ("JBDX".equals(magicStr)) {
+            // JarzBundleIndex format - load directly
+            return JarzLocalIndex.loadBundle(indexPath);
+        } else {
+            throw new IOException("Unknown index format: " + magicStr);
         }
     }
     
@@ -445,6 +480,34 @@ public abstract class JarzClassLoader extends SecureClassLoader implements AutoC
         }
         
         return null;
+    }
+    
+    /**
+     * Returns the Main-Class attribute from the manifest, if present.
+     * 
+     * <p>This method returns the fully qualified name of the main class
+     * as specified in the manifest's Main-Class attribute. Returns null
+     * if no Main-Class is specified (library loading scenario).
+     * 
+     * @return the fully qualified main class name, or null if not specified
+     * @since 1.0
+     */
+    public String getMainClassName() {
+        return mainClassName;
+    }
+    
+    /**
+     * Returns true if this JARZ archive has a Main-Class attribute.
+     * 
+     * <p>This method can be used to determine if the JARZ archive is
+     * intended for application loading (has Main-Class) or library
+     * loading (no Main-Class).
+     * 
+     * @return true if Main-Class is present, false otherwise
+     * @since 1.0
+     */
+    public boolean hasMainClass() {
+        return mainClassName != null;
     }
     
     @Override

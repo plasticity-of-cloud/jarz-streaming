@@ -123,6 +123,40 @@ public class S3JarzUnitTest {
         return ("// Fake class bytes for " + className).getBytes();
     }
     
+    @Test
+    @DisplayName("S3JarzClassLoader should inherit Main-Class support from base class")
+    void testS3MainClassInheritance() throws Exception {
+        // Create JARZ with Main-Class
+        Path mainJarzFile = tempDir.resolve("app-with-main.jarz");
+        createJarzWithMainClass(mainJarzFile);
+        
+        byte[] mainJarzBytes = Files.readAllBytes(mainJarzFile);
+        FakeS3Client fakeS3 = new FakeS3Client(mainJarzBytes);
+        
+        try (S3JarzClassLoader loader = new S3JarzClassLoader(fakeS3, "test-bucket", "app.jarz")) {
+            // Verify inherited Main-Class functionality
+            assertTrue(loader.hasMainClass(), "S3JarzClassLoader should inherit hasMainClass()");
+            assertEquals("com.example.MainApp", loader.getMainClassName(), 
+                "S3JarzClassLoader should inherit getMainClassName()");
+        }
+    }
+    
+    private void createJarzWithMainClass(Path jarzFile) throws Exception {
+        try (BlockWriter writer = new BlockWriter(jarzFile)) {
+            // Create application class
+            Block classBlock = new Block(1);
+            classBlock.add("com.example.MainApp", createTestClassBytes("com.example.MainApp"));
+            writer.writeBlock(classBlock);
+            
+            // Create manifest with Main-Class
+            Block manifestBlock = new Block(2);
+            String manifestContent = "Manifest-Version: 1.0\n" +
+                                   "Main-Class: com.example.MainApp\n\n";
+            manifestBlock.add("META-INF/MANIFEST.MF", manifestContent.getBytes());
+            writer.writeBlock(manifestBlock);
+        }
+    }
+    
     /**
      * Fake S3Client for testing without real S3.
      */

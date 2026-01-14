@@ -28,7 +28,7 @@ jobs:
           ${{ runner.os }}-x64-maven-
 
     - name: Build with Maven
-      run: mvn clean install -DskipTests
+      run: mvn clean install -Pmulti-release -DskipTests
 
     - name: Run tests
       run: mvn test
@@ -65,7 +65,7 @@ jobs:
           ${{ runner.os }}-arm64-maven-
 
     - name: Build with Maven
-      run: mvn clean install -DskipTests
+      run: mvn clean install -Pmulti-release -DskipTests
 
     - name: Run tests
       run: mvn test
