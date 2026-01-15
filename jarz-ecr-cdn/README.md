@@ -19,7 +19,7 @@ This module provides a cost-effective solution for Maven artifact distribution u
 
 ```xml
 <dependency>
-    <groupId>jdk.incubator.jarz</groupId>
+    <groupId>net.jarz-streaming</groupId>
     <artifactId>jarz-ecr-cdn</artifactId>
     <version>1.0-SNAPSHOT</version>
 </dependency>
@@ -456,7 +456,7 @@ RepositoryNotFoundException: The repository with name 'maven-artifacts' does not
 
 ```java
 // Enable debug logging
-System.setProperty("org.slf4j.simpleLogger.log.jdk.incubator.jarz.ecr", "debug");
+System.setProperty("org.slf4j.simpleLogger.log.net.jarz.streaming.ecr", "debug");
 ```
 
 ## Contributing

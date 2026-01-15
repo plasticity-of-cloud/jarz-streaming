@@ -166,7 +166,7 @@ public class CdnJarzClassLoader extends ClassLoader {
 ```xml
 <!-- Maven Plugin -->
 <plugin>
-    <groupId>jdk.incubator</groupId>
+    <groupId>net.jarz-streaming</groupId>
     <artifactId>jarz-maven-plugin</artifactId>
     <configuration>
         <generateExternalIndex>true</generateExternalIndex>

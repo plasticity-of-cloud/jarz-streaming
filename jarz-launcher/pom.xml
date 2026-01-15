@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>jdk.incubator</groupId>
+        <groupId>net.jarz-streaming</groupId>
         <artifactId>jarz-parent</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
@@ -24,14 +24,14 @@
     <dependencies>
         <!-- Core JARZ functionality -->
         <dependency>
-            <groupId>jdk.incubator</groupId>
+            <groupId>net.jarz-streaming</groupId>
             <artifactId>jarz-core</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <!-- S3 streaming support -->
         <dependency>
-            <groupId>jdk.incubator</groupId>
+            <groupId>net.jarz-streaming</groupId>
             <artifactId>jarz-s3</artifactId>
             <version>${project.version}</version>
             <optional>true</optional>
@@ -39,7 +39,7 @@
 
         <!-- CDN streaming support -->
         <dependency>
-            <groupId>jdk.incubator</groupId>
+            <groupId>net.jarz-streaming</groupId>
             <artifactId>jarz-cdn</artifactId>
             <version>${project.version}</version>
             <optional>true</optional>
@@ -86,7 +86,7 @@
                             <finalName>jarz-launcher</finalName>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>jdk.incubator.jarz.launcher.UniversalJarzLauncher</mainClass>
+                                    <mainClass>net.jarz.streaming.launcher.UniversalJarzLauncher</mainClass>
                                 </transformer>
                             </transformers>
                             <filters>

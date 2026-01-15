@@ -243,7 +243,7 @@ public class MemoryMappedJarzReader {
 #### Configuration
 ```xml
 <plugin>
-    <groupId>jdk.incubator.jarz</groupId>
+    <groupId>net.jarz-streaming</groupId>
     <artifactId>jarz-maven-plugin</artifactId>
     <version>1.0.0</version>
     <executions>
@@ -266,7 +266,7 @@ public class MemoryMappedJarzReader {
 #### Configuration
 ```gradle
 plugins {
-    id 'jdk.incubator.jarz' version '1.0.0'
+    id 'net.jarz.streaming' version '1.0.0'
 }
 
 jarz {
@@ -296,12 +296,12 @@ jar {
 // IntelliJ plugin extension points
 <extensions defaultExtensionNs="com.intellij">
     <fileType name="JARZ" 
-              implementationClass="jdk.incubator.jarz.idea.JarzFileType"
+              implementationClass="net.jarz.streaming.idea.JarzFileType"
               fieldName="INSTANCE" 
               language="JAVA" 
               extensions="jarz"/>
     
-    <library.type implementation="jdk.incubator.jarz.idea.JarzLibraryType"/>
+    <library.type implementation="net.jarz.streaming.idea.JarzLibraryType"/>
 </extensions>
 ```
 

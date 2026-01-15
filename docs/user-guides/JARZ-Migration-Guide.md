@@ -22,7 +22,7 @@ JARZ provides multiple ClassLoader implementations for different deployment scen
 **Use Case**: Replace URLClassLoader with JARZ support
 
 ```java
-import jdk.incubator.jarz.classloader.JarzClassLoader;
+import net.jarz.streaming.classloader.JarzClassLoader;
 import java.nio.file.Paths;
 
 // Before: JAR loading
@@ -43,7 +43,7 @@ try (JarzClassLoader jarzLoader = new JarzClassLoader(Paths.get("app.jarz"))) {
 **Use Case**: Run applications with Main-Class and Class-Path manifest entries
 
 ```java
-import jdk.incubator.jarz.classloader.JarzApplicationClassLoader;
+import net.jarz.streaming.classloader.JarzApplicationClassLoader;
 import java.nio.file.Paths;
 
 // Load application JARZ with manifest support
@@ -65,7 +65,7 @@ try (JarzApplicationClassLoader appLoader = new JarzApplicationClassLoader(Paths
 **Use Case**: Application with multiple JARZ libraries
 
 ```java
-import jdk.incubator.jarz.classloader.JarzApplicationClassLoader;
+import net.jarz.streaming.classloader.JarzApplicationClassLoader;
 import java.nio.file.Paths;
 
 // Parent-first delegation with multiple JARZ files
@@ -89,7 +89,7 @@ try (JarzApplicationClassLoader libLoader = new JarzApplicationClassLoader(
 **Use Case**: Stream JARZ from CDN without downloading entire archive
 
 ```java
-import jdk.incubator.jarz.cdn.CdnJarzClassLoader;
+import net.jarz.streaming.cdn.CdnJarzClassLoader;
 
 // Stream from CloudFront CDN
 String cdnUrl = "https://d1234567890.cloudfront.net/app.jarz";
@@ -106,8 +106,8 @@ try (CdnJarzClassLoader cdnLoader = new CdnJarzClassLoader(cdnUrl)) {
 **Use Case**: Configure timeouts, headers, and connection pooling
 
 ```java
-import jdk.incubator.jarz.cdn.CdnJarzClassLoader;
-import jdk.incubator.jarz.cdn.HttpConfig;
+import net.jarz.streaming.cdn.CdnJarzClassLoader;
+import net.jarz.streaming.cdn.HttpConfig;
 import java.time.Duration;
 
 // Configure HTTP client
@@ -129,7 +129,7 @@ try (CdnJarzClassLoader cdnLoader = new CdnJarzClassLoader(cdnUrl, config)) {
 **Use Case**: Pre-cache frequently used classes for faster startup
 
 ```java
-import jdk.incubator.jarz.cdn.CdnJarzClassLoader;
+import net.jarz.streaming.cdn.CdnJarzClassLoader;
 
 // CDN with separate index bundle for optimization
 String baseUrl = "https://d1234567890.cloudfront.net/";
@@ -153,7 +153,7 @@ try (CdnJarzClassLoader cdnLoader = new CdnJarzClassLoader(jarzUrl, indexUrl)) {
 **Use Case**: Stream JARZ from S3 with range requests
 
 ```java
-import jdk.incubator.jarz.s3.S3JarzClassLoader;
+import net.jarz.streaming.s3.S3JarzClassLoader;
 import software.amazon.awssdk.services.s3.S3Client;
 
 // Create S3 client
@@ -176,8 +176,8 @@ try (S3JarzClassLoader s3Loader = new S3JarzClassLoader(
 **Use Case**: Configure S3 client with custom settings
 
 ```java
-import jdk.incubator.jarz.s3.S3JarzClassLoader;
-import jdk.incubator.jarz.s3.S3Config;
+import net.jarz.streaming.s3.S3JarzClassLoader;
+import net.jarz.streaming.s3.S3Config;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.RequestPayer;
 
@@ -205,7 +205,7 @@ try (S3JarzClassLoader s3Loader = new S3JarzClassLoader(
 **Use Case**: Production deployment with index optimization
 
 ```java
-import jdk.incubator.jarz.s3.S3JarzClassLoader;
+import net.jarz.streaming.s3.S3JarzClassLoader;
 import software.amazon.awssdk.services.s3.S3Client;
 
 S3Client s3Client = S3Client.create();
@@ -237,8 +237,8 @@ try (S3JarzClassLoader s3Loader = new S3JarzClassLoader(
 **Use Case**: Local core libraries with streaming application code
 
 ```java
-import jdk.incubator.jarz.classloader.JarzClassLoader;
-import jdk.incubator.jarz.cdn.CdnJarzClassLoader;
+import net.jarz.streaming.classloader.JarzClassLoader;
+import net.jarz.streaming.cdn.CdnJarzClassLoader;
 
 // Local core libraries (cached)
 try (JarzClassLoader coreLoader = new JarzClassLoader(Paths.get("core-libs.jarz"));
@@ -258,7 +258,7 @@ try (JarzClassLoader coreLoader = new JarzClassLoader(Paths.get("core-libs.jarz"
 **Use Case**: Primary and backup regions for high availability
 
 ```java
-import jdk.incubator.jarz.s3.S3JarzClassLoader;
+import net.jarz.streaming.s3.S3JarzClassLoader;
 import software.amazon.awssdk.services.s3.S3Client;
 
 // Primary region
@@ -336,8 +336,8 @@ java -jar jarz-tools.jar --create-index \
 **Use Case**: Minimize ClassLoader memory overhead
 
 ```java
-import jdk.incubator.jarz.cdn.CdnJarzClassLoader;
-import jdk.incubator.jarz.cdn.MemoryConfig;
+import net.jarz.streaming.cdn.CdnJarzClassLoader;
+import net.jarz.streaming.cdn.MemoryConfig;
 
 // Configure memory usage
 MemoryConfig memConfig = MemoryConfig.builder()

@@ -4,13 +4,44 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>jdk.incubator</groupId>
+    <groupId>net.jarz-streaming</groupId>
     <artifactId>jarz-parent</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>JARZ - ZSTD Compressed Class Archives</name>
     <description>JEP: ZSTD-Compressed Class Archives</description>
+    <url>https://github.com/plasticity-cloud/jdk-enhancements</url>
+
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License v3.0</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Plasticity.Cloud</name>
+            <email>ecosystem@plasticity.cloud</email>
+            <organization>Plasticity.Cloud</organization>
+            <organizationUrl>https://plasticity.cloud</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/plasticity-cloud/jdk-enhancements.git</connection>
+        <developerConnection>scm:git:ssh://github.com:plasticity-cloud/jdk-enhancements.git</developerConnection>
+        <url>https://github.com/plasticity-cloud/jdk-enhancements/tree/main</url>
+    </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>central</id>
+            <url>https://central.sonatype.com/api/v1/publisher/deployments/upload/</url>
+        </repository>
+    </distributionManagement>
 
     <modules>
         <module>jarz-core</module>
@@ -40,12 +71,12 @@
         <dependencies>
             <!-- Internal modules -->
             <dependency>
-                <groupId>jdk.incubator</groupId>
+                <groupId>net.jarz-streaming</groupId>
                 <artifactId>jarz-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>jdk.incubator</groupId>
+                <groupId>net.jarz-streaming</groupId>
                 <artifactId>jarz-classloader</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -185,6 +216,76 @@
                                     <Multi-Release>true</Multi-Release>
                                 </manifestEntries>
                             </archive>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- Release profile for Maven Central -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <!-- Source plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                    <!-- Javadoc plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.10.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <source>11</source>
+                            <doclint>none</doclint>
+                        </configuration>
+                    </plugin>
+                    
+                    <!-- GPG plugin for signing -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.7</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                    <!-- Central Publishing plugin -->
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.9.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
                         </configuration>
                     </plugin>
                 </plugins>

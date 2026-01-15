@@ -119,11 +119,11 @@ List<int> offsets = new ArrayList<>();  // Direct int storage
 ```
 jarz-dictionary-trainer/
 ├── src/main/java/
-│   ├── jdk.incubator.jarz.dictionary/
+│   ├── net.jarz.streaming.dictionary/
 │   │   ├── ZstdFFMWrapper.java          # FFM bindings
 │   │   ├── DictionaryTrainer.java       # Training implementation
 │   │   └── PlatformLibraryLoader.java   # OS-specific loading
-│   └── jdk.incubator.jarz.dictionary.valhalla/  # Java 26+ only
+│   └── net.jarz.streaming.dictionary.valhalla/  # Java 26+ only
 │       ├── IndexEntry.java              # Value class
 │       └── PrimitiveCollections.java    # Primitive lists
 └── src/test/java/

@@ -11,7 +11,7 @@ This document defines the logging strategy for JARZ components, replacing ad-hoc
 ### Implementation
 
 - **JarzLogger**: Internal wrapper around `System.Logger` for consistent usage
-- **Location**: `jdk.incubator.jarz.internal.JarzLogger`
+- **Location**: `net.jarz.streaming.internal.JarzLogger`
 - **Benefits**: 
   - No external dependencies
   - Automatic framework detection (Log4j, SLF4J, etc.)
@@ -123,10 +123,10 @@ java -Djava.util.logging.manager=org.slf4j.bridge.SLF4JBridgeHandler ...
 ### JVM Unified Logging
 ```bash
 # Enable JARZ-specific logging
-java -Xlog:jdk.incubator.jarz:jarz.log:time,level,tags
+java -Xlog:net.jarz.streaming:jarz.log:time,level,tags
 
 # Debug level for development
-java -Xlog:jdk.incubator.jarz:stdout:time,level,tags -Djava.util.logging.level=DEBUG
+java -Xlog:net.jarz.streaming:stdout:time,level,tags -Djava.util.logging.level=DEBUG
 ```
 
 ## Benefits

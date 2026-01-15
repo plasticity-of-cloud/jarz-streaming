@@ -1,8 +1,8 @@
 package jdk.tools.jmodz;
 
-import jdk.incubator.jarz.v2.BlockWriter;
-import jdk.incubator.jarz.v2.BlockReader;
-import jdk.incubator.jarz.v2.Block;
+import net.jarz.streaming.v2.BlockWriter;
+import net.jarz.streaming.v2.BlockReader;
+import net.jarz.streaming.v2.Block;
 import java.io.*;
 import java.nio.file.*;
 import java.util.stream.Collectors;

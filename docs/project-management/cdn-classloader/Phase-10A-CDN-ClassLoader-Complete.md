@@ -126,7 +126,7 @@ aws cloudformation deploy \
 **Features**: Multi-provider demonstration, cache statistics, prefetch examples
 
 ```bash
-mvn compile exec:java -pl jarz-cdn -Dexec.mainClass="jdk.incubator.jarz.cdn.CdnJarzDemo"
+mvn compile exec:java -pl jarz-cdn -Dexec.mainClass="net.jarz.streaming.cdn.CdnJarzDemo"
 ```
 
 ## 📋 **Next Steps (Phase 10B)**

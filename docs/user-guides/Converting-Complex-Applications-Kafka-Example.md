@@ -97,7 +97,7 @@ du -h libs/ jarz/
 
 ```java
 // KafkaJarzLauncher.java
-import jdk.incubator.jarz.classloader.JarzApplicationClassLoader;
+import net.jarz.streaming.classloader.JarzApplicationClassLoader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.lang.reflect.Method;
@@ -160,8 +160,8 @@ public class KafkaJarzLauncher {
 
 ```java
 // KafkaStreamingLauncher.java
-import jdk.incubator.jarz.cdn.CdnJarzClassLoader;
-import jdk.incubator.jarz.s3.S3JarzClassLoader;
+import net.jarz.streaming.cdn.CdnJarzClassLoader;
+import net.jarz.streaming.s3.S3JarzClassLoader;
 import software.amazon.awssdk.services.s3.S3Client;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
@@ -410,7 +410,7 @@ java -jar jarz-cli.jar --create-index \
 
 ```java
 // Add to KafkaJarzLauncher for memory optimization
-import jdk.incubator.jarz.classloader.MemoryConfig;
+import net.jarz.streaming.classloader.MemoryConfig;
 
 // Configure memory-optimized ClassLoader
 MemoryConfig memConfig = MemoryConfig.builder()
