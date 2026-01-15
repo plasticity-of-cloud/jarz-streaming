@@ -37,3 +37,37 @@ Automatically bumps project version after a public release.
 - Requires user confirmation
 - Uses `mvn versions:commit` to clean up backup files
 - Doesn't auto-push (you control when changes go remote)
+
+## sync-to-public.sh
+
+Synchronizes private repository tag to public repository using rsync strategy.
+
+### Usage
+
+```bash
+# Sync specific tag to public repository (default path)
+./scripts/sync-to-public.sh v2.1.3-pre-ga
+
+# Sync to custom public repository path
+./scripts/sync-to-public.sh v2.1.3-pre-ga /path/to/custom/public/repo
+
+# After creating new tag
+git tag v2.1.4-pre-ga
+git push origin v2.1.4-pre-ga
+./scripts/sync-to-public.sh v2.1.4-pre-ga
+```
+
+### What it does
+
+- Extracts specified tag to temporary directory
+- Uses rsync with --delete to ensure exact synchronization
+- Excludes .kiro* and .git* files automatically
+- Commits and pushes changes to public repository
+- Cleans up temporary files
+
+### Advantages over git archive
+
+- **True synchronization**: Removes files not in private repo
+- **No leftover files**: --delete flag removes obsolete files
+- **Reliable**: Most robust sync strategy
+- **Safe**: Uses temporary directory, doesn't affect private repo
