@@ -43,7 +43,7 @@ jobs:
           **/target/failsafe-reports/
 
   build-arm64:
-    runs-on: ubuntu-latest-arm
+    runs-on: ubuntu-24.04-arm64
     # Only run ARM builds for public repositories
     if: github.event.repository.private == false
     steps:
