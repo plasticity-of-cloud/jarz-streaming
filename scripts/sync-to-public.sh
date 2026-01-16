@@ -51,7 +51,7 @@ fi
 
 # Sync with rsync (delete files not in source, exclude .kiro)
 echo "Syncing to public repository with rsync..."
-rsync -av --delete --exclude='.kiro*' --exclude='.git*' "$TEMP_SYNC_DIR/" "$PUBLIC_REPO/"
+rsync -av --delete --checksum --exclude='.kiro*' --exclude='.git*' "$TEMP_SYNC_DIR/" "$PUBLIC_REPO/"
 
 # Commit changes in public repo
 cd "$PUBLIC_REPO"
