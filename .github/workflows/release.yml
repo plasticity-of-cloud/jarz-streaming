@@ -29,6 +29,8 @@ jobs:
         echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
         echo "use-agent" >> ~/.gnupg/gpg.conf
         echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+        echo "batch" >> ~/.gnupg/gpg.conf
+        echo "no-tty" >> ~/.gnupg/gpg.conf
         
     - name: Cache Maven dependencies
       uses: actions/cache@v4
@@ -68,3 +70,4 @@ jobs:
       env:
         SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
         SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+        MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

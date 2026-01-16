@@ -59,3 +59,6 @@ demo-extracted/
 *-test.jar
 *-demo.jarz
 converted*.jarz
+
+# Security workflows (private repo only)
+.github/workflows/security.yml
