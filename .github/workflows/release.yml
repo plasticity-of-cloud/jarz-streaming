@@ -24,6 +24,12 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         
+    - name: Setup GPG
+      run: |
+        echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+        echo "use-agent" >> ~/.gnupg/gpg.conf
+        echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+        
     - name: Cache Maven dependencies
       uses: actions/cache@v4
       with:
