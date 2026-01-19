@@ -33,7 +33,7 @@ jobs:
         echo "no-tty" >> ~/.gnupg/gpg.conf
         
     - name: Cache Maven dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
