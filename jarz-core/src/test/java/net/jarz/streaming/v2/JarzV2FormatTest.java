@@ -297,19 +297,17 @@ class JarzV2FormatTest {
     
     private byte[] generateClassDictionary() {
         // Common class file patterns for dictionary training
-        String commonPatterns = """
-            java/lang/Object
-            java/lang/String
-            java/lang/Exception
-            <init>
-            ()V
-            (Ljava/lang/String;)V
-            Code
-            LineNumberTable
-            LocalVariableTable
-            SourceFile
-            this
-            """;
+        String commonPatterns = "java/lang/Object\n" +
+            "java/lang/String\n" +
+            "java/lang/Exception\n" +
+            "<init>\n" +
+            "()V\n" +
+            "(Ljava/lang/String;)V\n" +
+            "Code\n" +
+            "LineNumberTable\n" +
+            "LocalVariableTable\n" +
+            "SourceFile\n" +
+            "this\n";
         return commonPatterns.getBytes();
     }
 }

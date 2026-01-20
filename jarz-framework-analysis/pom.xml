@@ -95,7 +95,7 @@
                 <executions>
                     <execution>
                         <id>copy-dependencies</id>
-                        <phase>generate-test-resources</phase>
+                        <phase>process-test-classes</phase>
                         <goals>
                             <goal>copy-dependencies</goal>
                         </goals>
@@ -107,7 +107,7 @@
                     </execution>
                     <execution>
                         <id>build-classpath</id>
-                        <phase>generate-test-resources</phase>
+                        <phase>process-test-classes</phase>
                         <goals>
                             <goal>build-classpath</goal>
                         </goals>

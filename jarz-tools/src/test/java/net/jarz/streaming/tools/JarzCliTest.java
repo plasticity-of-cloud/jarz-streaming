@@ -51,22 +51,18 @@ class JarzCliTest {
     private Path createTestJar(String packageName, String className) throws Exception {
         String testClass;
         if (packageName.isEmpty()) {
-            testClass = String.format("""
-                public class %s {
-                    public String getMessage() {
-                        return "Hello from %s!";
-                    }
-                }
-                """, className, className);
+            testClass = String.format("public class %s {\n" +
+                "    public String getMessage() {\n" +
+                "        return \"Hello from %s!\";\n" +
+                "    }\n" +
+                "}\n", className, className);
         } else {
-            testClass = String.format("""
-                package %s;
-                public class %s {
-                    public String getMessage() {
-                        return "Hello from %s!";
-                    }
-                }
-                """, packageName, className, className);
+            testClass = String.format("package %s;\n" +
+                "public class %s {\n" +
+                "    public String getMessage() {\n" +
+                "        return \"Hello from %s!\";\n" +
+                "    }\n" +
+                "}\n", packageName, className, className);
         }
 
         Path packageDir = packageName.isEmpty() ? tempDir : tempDir.resolve(packageName);
@@ -96,13 +92,11 @@ class JarzCliTest {
     private Path createCompiledClass(String className, Path outputDir) throws Exception {
         Files.createDirectories(outputDir);
         
-        String classCode = String.format("""
-            public class %s {
-                public String getMessage() {
-                    return "Hello from %s!";
-                }
-            }
-            """, className, className);
+        String classCode = String.format("public class %s {\n" +
+            "    public String getMessage() {\n" +
+            "        return \"Hello from %s!\";\n" +
+            "    }\n" +
+            "}\n", className, className);
         
         Path javaFile = outputDir.resolve(className + ".java");
         Files.writeString(javaFile, classCode);

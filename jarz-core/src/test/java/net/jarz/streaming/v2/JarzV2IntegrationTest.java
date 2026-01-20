@@ -361,20 +361,18 @@ class JarzV2IntegrationTest {
     }
     
     private byte[] createMicroserviceDictionary() {
-        String patterns = """
-            @RestController
-            @Service
-            @Repository
-            @Entity
-            @Autowired
-            @RequestMapping
-            @GetMapping
-            @PostMapping
-            @PathVariable
-            @RequestBody
-            org/springframework
-            javax/persistence
-            """;
+        String patterns = "@RestController\n" +
+            "@Service\n" +
+            "@Repository\n" +
+            "@Entity\n" +
+            "@Autowired\n" +
+            "@RequestMapping\n" +
+            "@GetMapping\n" +
+            "@PostMapping\n" +
+            "@PathVariable\n" +
+            "@RequestBody\n" +
+            "org/springframework\n" +
+            "javax/persistence\n";
         return patterns.getBytes();
     }
     

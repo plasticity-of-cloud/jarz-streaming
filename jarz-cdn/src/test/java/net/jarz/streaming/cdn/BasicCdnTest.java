@@ -55,17 +55,15 @@ public class BasicCdnTest {
 
     private static void createTestJar() throws Exception {
         // Create a simple test class
-        String testClass = """
-            package test;
-            public class SimpleTest {
-                public static String getMessage() {
-                    return "Hello from CDN!";
-                }
-                public int getValue() {
-                    return 42;
-                }
-            }
-            """;
+        String testClass = "package test;\n" +
+            "public class SimpleTest {\n" +
+            "    public static String getMessage() {\n" +
+            "        return \"Hello from CDN!\";\n" +
+            "    }\n" +
+            "    public int getValue() {\n" +
+            "        return 42;\n" +
+            "    }\n" +
+            "}\n";
 
         // Write and compile the test class
         Path tempDir = Files.createTempDirectory("basic-cdn-test");
