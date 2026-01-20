@@ -74,6 +74,19 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
                         <executions>
+                            <!-- Base classes: Java 11 -->
+                            <execution>
+                                <id>default-compile</id>
+                                <goals>
+                                    <goal>compile</goal>
+                                </goals>
+                                <configuration>
+                                    <release>11</release>
+                                    <compileSourceRoots>
+                                        <compileSourceRoot>${project.basedir}/src/main/java</compileSourceRoot>
+                                    </compileSourceRoots>
+                                </configuration>
+                            </execution>
                             <!-- Java 21 specific compilation -->
                             <execution>
                                 <id>compile-java21</id>
