@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.jar.*;
+import java.util.stream.Collectors;
 
 /**
  * Real-world validation test for JARZ v2 block compression.
@@ -48,7 +49,7 @@ public class RealWorldValidation {
         long totalOriginalSize = 0;
         
         try (var walk = Files.walk(javaBaseDir)) {
-            var classFiles = walk.filter(p -> p.toString().endsWith(".class")).toList();
+            var classFiles = walk.filter(p -> p.toString().endsWith(".class")).collect(Collectors.toList());
             System.out.printf("Found %d class files%n", classFiles.size());
             
             for (Path classFile : classFiles) {

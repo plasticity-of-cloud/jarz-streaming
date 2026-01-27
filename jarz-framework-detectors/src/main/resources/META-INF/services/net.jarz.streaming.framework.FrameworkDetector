@@ -1,0 +1,8 @@
+net.jarz.streaming.framework.detectors.flink.FlinkFrameworkDetector
+net.jarz.streaming.framework.detectors.spark.SparkFrameworkDetector
+net.jarz.streaming.framework.detectors.spring.SpringFrameworkDetector
+net.jarz.streaming.framework.detectors.hadoop.HadoopFrameworkDetector
+net.jarz.streaming.framework.detectors.aws.AwsSdkFrameworkDetector
+net.jarz.streaming.framework.detectors.azure.AzureSdkFrameworkDetector
+net.jarz.streaming.framework.detectors.gcp.GcpSdkFrameworkDetector
+net.jarz.streaming.framework.detectors.oracle.OciSdkFrameworkDetector
