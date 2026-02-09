@@ -41,7 +41,9 @@ public class EnhancedBlockAssigner {
     
     private static final int DEFAULT_BLOCK_SIZE = 64 * 1024; // 64KB target
     private static final int MAX_BLOCK_SIZE = 256 * 1024;    // 256KB max
-    private static final int MIN_CLASSES_PER_BLOCK = 5;      // Minimum for compression efficiency
+    private static final int MIN_CLASSES_PER_BLOCK = 50;     // Increased from 30 for better compression
+    private static final int OPTIMAL_CLASSES_PER_BLOCK = 80; // Increased from 50 for better compression
+    private static final int MAX_CLASSES_PER_BLOCK = 150;    // Increased from 100 for better compression
     
     private final FrameworkDetectorRegistry frameworkRegistry;
     
@@ -87,11 +89,10 @@ public class EnhancedBlockAssigner {
     }
     
     /**
-     * Framework JARs (Spring, Flink, Spark) - cluster by functional modules.
+     * Framework JARs (Spring, Flink, Spark) - cluster by functional modules with optimal block sizes.
      * 
-     * <p>Groups classes by framework-specific modules for optimal compression.
-     * For example, Flink streaming classes are grouped together as they share
-     * similar bytecode patterns and dependencies.
+     * <p>Groups classes by framework-specific modules but ensures blocks are large enough
+     * for optimal ZSTD compression. Small framework groups are merged together.
      */
     private List<Block> clusterByFrameworkPatterns(Map<String, byte[]> classFiles, DependencyGraph graph) {
         Map<String, List<String>> moduleGroups = new HashMap<>();
@@ -101,155 +102,163 @@ public class EnhancedBlockAssigner {
             moduleGroups.computeIfAbsent(module, k -> new ArrayList<>()).add(className);
         }
         
+        // Sort framework groups by size (largest first)
+        List<Map.Entry<String, List<String>>> sortedGroups = moduleGroups.entrySet().stream()
+            .sorted((a, b) -> Integer.compare(b.getValue().size(), a.getValue().size()))
+            .collect(Collectors.toList());
+        
         List<Block> blocks = new ArrayList<>();
         int blockId = 0;
         
-        for (Map.Entry<String, List<String>> entry : moduleGroups.entrySet()) {
+        // For large homogeneous frameworks (like Guava with 1961 "com" classes),
+        // treat as a single framework and create optimal blocks
+        if (sortedGroups.size() == 1 || 
+            (sortedGroups.size() == 2 && sortedGroups.get(1).getValue().size() < 20)) { // Reduced threshold
+            // Single dominant framework - use simple optimal blocking
+            List<String> allClasses = new ArrayList<>(classFiles.keySet());
+            allClasses.sort(String::compareTo);
+            return createOptimalBlocks(allClasses, classFiles, 0, "single-framework");
+        }
+        
+        // Multiple significant frameworks - group by framework but ensure optimal sizes
+        List<String> allClasses = new ArrayList<>();
+        
+        // Process large framework groups first with aggressive grouping
+        for (Map.Entry<String, List<String>> entry : sortedGroups) {
+            String framework = entry.getKey();
             List<String> classes = entry.getValue();
             
-            // Split large modules into multiple blocks
-            for (int i = 0; i < classes.size(); i += getOptimalBlockSize(classes, i)) {
-                Block block = new Block(blockId++);
-                int end = Math.min(i + getOptimalBlockSize(classes, i), classes.size());
+            if (classes.size() >= MIN_CLASSES_PER_BLOCK) { // Use MIN instead of OPTIMAL for more aggressive grouping
+                // Large framework: create dedicated blocks with better compression
+                classes.sort(String::compareTo);
                 
-                for (int j = i; j < end; j++) {
-                    String className = classes.get(j);
-                    block.add(className, classFiles.get(className));
-                }
-                
-                if (block.size() >= MIN_CLASSES_PER_BLOCK) {
-                    blocks.add(block);
-                }
+                // For very large frameworks, use larger blocks for better compression
+                int targetBlockSize = classes.size() > 500 ? MAX_CLASSES_PER_BLOCK : OPTIMAL_CLASSES_PER_BLOCK;
+                blocks.addAll(createOptimalBlocks(classes, classFiles, blockId, framework, targetBlockSize));
+                blockId += (classes.size() + targetBlockSize - 1) / targetBlockSize;
+            } else {
+                // Small framework: add to mixed pool
+                allClasses.addAll(classes);
             }
+        }
+        
+        // Create mixed blocks from small frameworks
+        if (!allClasses.isEmpty()) {
+            allClasses.sort(String::compareTo);
+            blocks.addAll(createOptimalBlocks(allClasses, classFiles, blockId, "mixed"));
         }
         
         return blocks;
     }
     
     /**
-     * Library JARs - cluster by package hierarchy for better compression.
+     * Library JARs - cluster by package hierarchy with optimal block sizes.
      * 
-     * <p>Groups classes by package prefixes as classes in the same package
-     * typically have similar bytecode patterns and compression characteristics.
+     * <p>Groups classes by package prefixes but ensures minimum block sizes
+     * for compression efficiency. Small packages are merged together.
      */
     private List<Block> clusterByPackageHierarchy(Map<String, byte[]> classFiles, DependencyGraph graph) {
         // Group by package prefix (2-3 levels deep)
         Map<String, List<String>> packageGroups = classFiles.keySet().stream()
             .collect(Collectors.groupingBy(this::getPackagePrefix));
         
+        // Sort packages by size (largest first)
+        List<Map.Entry<String, List<String>>> sortedPackages = packageGroups.entrySet().stream()
+            .sorted((a, b) -> Integer.compare(b.getValue().size(), a.getValue().size()))
+            .collect(Collectors.toList());
+        
         List<Block> blocks = new ArrayList<>();
         int blockId = 0;
         
-        for (Map.Entry<String, List<String>> entry : packageGroups.entrySet()) {
+        // Process large packages first
+        for (Map.Entry<String, List<String>> entry : sortedPackages) {
             List<String> classes = entry.getValue();
             
-            // Sort by class name for better compression (similar names together)
-            classes.sort(String::compareTo);
-            
-            Block block = new Block(blockId++);
-            int currentSize = 0;
-            
-            for (String className : classes) {
-                byte[] classData = classFiles.get(className);
-                
-                if (currentSize + classData.length > MAX_BLOCK_SIZE && block.size() >= MIN_CLASSES_PER_BLOCK) {
-                    blocks.add(block);
-                    block = new Block(blockId++);
-                    currentSize = 0;
-                }
-                
-                block.add(className, classData);
-                currentSize += classData.length;
+            if (classes.size() >= MIN_CLASSES_PER_BLOCK) {
+                // Sort by class name for better compression (similar names together)
+                classes.sort(String::compareTo);
+                blocks.addAll(createOptimalBlocks(classes, classFiles, blockId, entry.getKey()));
+                blockId += (classes.size() + OPTIMAL_CLASSES_PER_BLOCK - 1) / OPTIMAL_CLASSES_PER_BLOCK;
             }
-            
-            if (block.size() >= MIN_CLASSES_PER_BLOCK) {
-                blocks.add(block);
+        }
+        
+        // Merge small packages into mixed blocks
+        List<String> smallPackageClasses = new ArrayList<>();
+        for (Map.Entry<String, List<String>> entry : sortedPackages) {
+            if (entry.getValue().size() < MIN_CLASSES_PER_BLOCK) {
+                smallPackageClasses.addAll(entry.getValue());
             }
+        }
+        
+        if (!smallPackageClasses.isEmpty()) {
+            smallPackageClasses.sort(String::compareTo);
+            blocks.addAll(createOptimalBlocks(smallPackageClasses, classFiles, blockId, "mixed"));
         }
         
         return blocks;
     }
     
     /**
-     * Application JARs - cluster by dependency strength.
+     * Application JARs - cluster by dependency strength with optimal block sizes.
      * 
-     * <p>Uses strongly connected components to group classes that have
-     * high interdependency, which typically results in better compression
-     * due to similar usage patterns and bytecode structures.
+     * <p>Uses strongly connected components to group classes but ensures
+     * optimal block sizes for compression efficiency.
      */
     private List<Block> clusterByDependencyStrength(Map<String, byte[]> classFiles, DependencyGraph graph) {
         // Use dependency graph to create strongly connected components
         List<Set<String>> components = findStronglyConnectedComponents(graph);
         
+        // Sort components by size (largest first)
+        components.sort((a, b) -> Integer.compare(b.size(), a.size()));
+        
         List<Block> blocks = new ArrayList<>();
         int blockId = 0;
         
+        // Process large components first
         for (Set<String> component : components) {
-            if (component.size() < MIN_CLASSES_PER_BLOCK) {
-                continue; // Skip small components
-            }
-            
-            Block block = new Block(blockId++);
-            int currentSize = 0;
-            
-            for (String className : component) {
-                if (classFiles.containsKey(className)) {
-                    byte[] classData = classFiles.get(className);
+            if (component.size() >= MIN_CLASSES_PER_BLOCK) {
+                List<String> componentClasses = component.stream()
+                    .filter(classFiles::containsKey)
+                    .sorted() // Sort for consistent ordering
+                    .collect(Collectors.toList());
                     
-                    if (currentSize + classData.length > MAX_BLOCK_SIZE && block.size() >= MIN_CLASSES_PER_BLOCK) {
-                        blocks.add(block);
-                        block = new Block(blockId++);
-                        currentSize = 0;
-                    }
-                    
-                    block.add(className, classData);
-                    currentSize += classData.length;
+                if (!componentClasses.isEmpty()) {
+                    blocks.addAll(createOptimalBlocks(componentClasses, classFiles, blockId, "dependency"));
+                    blockId += (componentClasses.size() + OPTIMAL_CLASSES_PER_BLOCK - 1) / OPTIMAL_CLASSES_PER_BLOCK;
                 }
             }
-            
-            if (block.size() >= MIN_CLASSES_PER_BLOCK) {
-                blocks.add(block);
+        }
+        
+        // Merge small components into mixed blocks
+        List<String> smallComponentClasses = new ArrayList<>();
+        for (Set<String> component : components) {
+            if (component.size() < MIN_CLASSES_PER_BLOCK) {
+                smallComponentClasses.addAll(component.stream()
+                    .filter(classFiles::containsKey)
+                    .collect(Collectors.toList()));
             }
+        }
+        
+        if (!smallComponentClasses.isEmpty()) {
+            smallComponentClasses.sort(String::compareTo);
+            blocks.addAll(createOptimalBlocks(smallComponentClasses, classFiles, blockId, "mixed"));
         }
         
         return blocks;
     }
     
     /**
-     * Utility JARs - simple size-based clustering.
+     * Utility JARs - simple size-based clustering with optimal block sizes.
      * 
-     * <p>For small utility libraries, uses simple size-based grouping
-     * to create reasonably sized blocks without complex analysis overhead.
+     * <p>For small utility libraries, uses size-based grouping to create
+     * optimally sized blocks for compression efficiency.
      */
     private List<Block> clusterBySize(Map<String, byte[]> classFiles) {
-        List<Map.Entry<String, byte[]>> sortedClasses = classFiles.entrySet().stream()
-            .sorted(Map.Entry.<String, byte[]>comparingByValue((a, b) -> Integer.compare(b.length, a.length)))
-            .collect(Collectors.toList());
+        List<String> allClasses = new ArrayList<>(classFiles.keySet());
+        // Sort by class name for consistent ordering
+        allClasses.sort(String::compareTo);
         
-        List<Block> blocks = new ArrayList<>();
-        Block currentBlock = new Block(0);
-        int currentSize = 0;
-        int blockId = 0;
-        
-        for (Map.Entry<String, byte[]> entry : sortedClasses) {
-            String className = entry.getKey();
-            byte[] classData = entry.getValue();
-            
-            if (currentSize + classData.length > DEFAULT_BLOCK_SIZE && currentBlock.size() >= MIN_CLASSES_PER_BLOCK) {
-                blocks.add(currentBlock);
-                currentBlock = new Block(++blockId);
-                currentSize = 0;
-            }
-            
-            currentBlock.add(className, classData);
-            currentSize += classData.length;
-        }
-        
-        if (currentBlock.size() >= MIN_CLASSES_PER_BLOCK) {
-            blocks.add(currentBlock);
-        }
-        
-        return blocks;
+        return createOptimalBlocks(allClasses, classFiles, 0, "utility");
     }
     
     /**
@@ -268,6 +277,126 @@ public class EnhancedBlockAssigner {
         }
         
         return dependencyBlocks;
+    }
+    
+    /**
+     * Creates optimally-sized blocks from a list of classes.
+     * 
+     * <p>This method ensures blocks are sized for optimal ZSTD compression
+     * by targeting OPTIMAL_CLASSES_PER_BLOCK classes per block.
+     * 
+     * @param classes List of class names to group into blocks
+     * @param classFiles Map of class names to bytecode
+     * @param startBlockId Starting block ID for numbering
+     * @param context Context string for debugging (framework name, etc.)
+     * @return List of optimally-sized blocks
+     */
+    private List<Block> createOptimalBlocks(List<String> classes, Map<String, byte[]> classFiles, 
+                                          int startBlockId, String context) {
+        List<Block> blocks = new ArrayList<>();
+        
+        if (classes.isEmpty()) {
+            return blocks;
+        }
+        
+        int blockId = startBlockId;
+        
+        // Create blocks with exactly OPTIMAL_CLASSES_PER_BLOCK classes each
+        for (int i = 0; i < classes.size(); i += OPTIMAL_CLASSES_PER_BLOCK) {
+            Block block = new Block(blockId++);
+            int end = Math.min(i + OPTIMAL_CLASSES_PER_BLOCK, classes.size());
+            
+            // Add classes to block
+            for (int j = i; j < end; j++) {
+                String className = classes.get(j);
+                byte[] classData = classFiles.get(className);
+                if (classData != null) {
+                    block.add(className, classData);
+                }
+            }
+            
+            // Always add the block - we'll ensure it has enough classes
+            if (block.entryCount() > 0) {
+                blocks.add(block);
+            }
+        }
+        
+        // If the last block is too small, merge it with the previous block
+        if (blocks.size() > 1) {
+            Block lastBlock = blocks.get(blocks.size() - 1);
+            if (lastBlock.entryCount() < MIN_CLASSES_PER_BLOCK) {
+                Block secondLastBlock = blocks.get(blocks.size() - 2);
+                
+                // Merge last block into second-to-last block
+                for (Block.ClassEntry entry : lastBlock.entries()) {
+                    secondLastBlock.add(entry.className(), entry.classData());
+                }
+                
+                // Remove the small last block
+                blocks.remove(blocks.size() - 1);
+            }
+        }
+        
+        return blocks;
+    }
+    
+    /**
+     * Creates optimal blocks with custom target block size for better compression.
+     * 
+     * @param classes List of class names to group
+     * @param classFiles Map of class names to class data
+     * @param startBlockId Starting block ID for numbering
+     * @param context Context string for debugging (framework name, etc.)
+     * @param targetBlockSize Target number of classes per block
+     * @return List of optimally-sized blocks
+     */
+    private List<Block> createOptimalBlocks(List<String> classes, Map<String, byte[]> classFiles, 
+                                          int startBlockId, String context, int targetBlockSize) {
+        List<Block> blocks = new ArrayList<>();
+        
+        if (classes.isEmpty()) {
+            return blocks;
+        }
+        
+        int blockId = startBlockId;
+        
+        // Create blocks with custom target size for better compression
+        for (int i = 0; i < classes.size(); i += targetBlockSize) {
+            Block block = new Block(blockId++);
+            int end = Math.min(i + targetBlockSize, classes.size());
+            
+            // Add classes to block
+            for (int j = i; j < end; j++) {
+                String className = classes.get(j);
+                byte[] classData = classFiles.get(className);
+                if (classData != null) {
+                    block.add(className, classData);
+                }
+            }
+            
+            // Always add the block - we'll ensure it has enough classes
+            if (block.entryCount() > 0) {
+                blocks.add(block);
+            }
+        }
+        
+        // If the last block is too small, merge it with the previous block
+        if (blocks.size() > 1) {
+            Block lastBlock = blocks.get(blocks.size() - 1);
+            if (lastBlock.entryCount() < MIN_CLASSES_PER_BLOCK) {
+                Block secondLastBlock = blocks.get(blocks.size() - 2);
+                
+                // Merge last block into second-to-last block
+                for (Block.ClassEntry entry : lastBlock.entries()) {
+                    secondLastBlock.add(entry.className(), entry.classData());
+                }
+                
+                // Remove the small last block
+                blocks.remove(blocks.size() - 1);
+            }
+        }
+        
+        return blocks;
     }
     
     // Helper methods
@@ -317,10 +446,10 @@ public class EnhancedBlockAssigner {
     
     /**
      * Calculates optimal block size based on class characteristics.
+     * Now returns consistent optimal size for better compression.
      */
     private int getOptimalBlockSize(List<String> classes, int startIndex) {
-        // Dynamic block sizing based on class characteristics
-        return Math.min(50, classes.size() - startIndex); // Max 50 classes per block
+        return OPTIMAL_CLASSES_PER_BLOCK; // Consistent optimal size
     }
     
     /**

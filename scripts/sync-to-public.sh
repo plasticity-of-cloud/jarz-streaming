@@ -49,9 +49,9 @@ if [ ! -d "$PUBLIC_REPO" ]; then
     exit 1
 fi
 
-# Sync with rsync (delete files not in source, exclude .kiro and .git directory but allow .github)
+# Sync with rsync (delete files not in source, exclude .kiro, .git directory, and marketing folder but allow .github)
 echo "Syncing to public repository with rsync..."
-rsync -av --delete --checksum --exclude='.kiro*' --exclude='.git/' "$TEMP_SYNC_DIR/" "$PUBLIC_REPO/"
+rsync -av --delete --checksum --exclude='.kiro*' --exclude='.git/' --exclude='marketing/' "$TEMP_SYNC_DIR/" "$PUBLIC_REPO/"
 
 # Commit changes in public repo
 cd "$PUBLIC_REPO"

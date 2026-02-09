@@ -6,7 +6,7 @@
 
     <groupId>net.jarz-streaming</groupId>
     <artifactId>jarz-parent</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>2.1.14-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>JARZ - ZSTD Compressed Class Archives</name>
@@ -61,7 +61,7 @@
         
         <!-- Dependencies -->
         <zstd-jni.version>1.5.7-6</zstd-jni.version>
-        <aws-sdk.version>2.41.14</aws-sdk.version>
+        <aws-sdk.version>2.41.19</aws-sdk.version>
         <junit.version>5.14.2</junit.version>
         <assertj.version>3.27.7</assertj.version>
         <jmh.version>1.37</jmh.version>
@@ -147,7 +147,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.14.1</version>
+                    <version>3.15.0</version>
                     <configuration>
                         <release>${maven.compiler.release}</release>
                     </configuration>

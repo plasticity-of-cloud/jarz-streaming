@@ -25,11 +25,13 @@ else
         BASE_VERSION="$CURRENT_VERSION"
     fi
     
-    # Extract major.minor and increment minor
+    # Extract major.minor.patch and increment patch
     MAJOR=$(echo "$BASE_VERSION" | cut -d. -f1)
     MINOR=$(echo "$BASE_VERSION" | cut -d. -f2)
-    NEXT_MINOR=$((MINOR + 1))
-    NEXT_VERSION="${MAJOR}.${NEXT_MINOR}-SNAPSHOT"
+    PATCH=$(echo "$BASE_VERSION" | cut -d. -f3)
+    PATCH=${PATCH:-0}
+    NEXT_PATCH=$((PATCH + 1))
+    NEXT_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}-SNAPSHOT"
 fi
 
 echo "Next version: $NEXT_VERSION"

@@ -28,6 +28,12 @@
 - [ClassLoaderMemoryOptimizationDesign.md](technical-specs/ClassLoaderMemoryOptimizationDesign.md) - 4-phase optimization strategy to reduce ClassLoader memory overhead from 150KB+ to <5KB
 - [CdnClassLoaderMemoryOptimizationDesign.md](technical-specs/CdnClassLoaderMemoryOptimizationDesign.md) - 4-phase optimization strategy for CDN ClassLoader memory reduction
 - [Enhanced-JARZ-CLI-Specification.md](technical-specs/Enhanced-JARZ-CLI-Specification.md) - JAR-compatible CLI tool specification
+- **Dependency Analysis:**
+  - [dependency-analysis/](technical-specs/dependency-analysis/) - Advanced clustering algorithms for 5-15% compression improvements
+  - [JARZ-Enhanced-Dependency-Analysis.md](technical-specs/dependency-analysis/JARZ-Enhanced-Dependency-Analysis.md) - Master document with three advanced approaches
+  - [Compression-Aware-Block-Optimization.md](technical-specs/dependency-analysis/Compression-Aware-Block-Optimization.md) - Real-time compression feedback optimization
+  - [Semantic-Dependency-Graph-Clustering.md](technical-specs/dependency-analysis/Semantic-Dependency-Graph-Clustering.md) - Class relationship analysis for complex JARs
+  - [Bytecode-Pattern-Trie-Clustering.md](technical-specs/dependency-analysis/Bytecode-Pattern-Trie-Clustering.md) - Binary prefix tree bytecode analysis
 - **CDN Optimization Phases:**
   - [Phase1-LazyInitialization.md](technical-specs/cdn-optimization/Phase1-LazyInitialization.md) - Defer expensive resource allocation until first use
   - [Phase2-ResourcePooling.md](technical-specs/cdn-optimization/Phase2-ResourcePooling.md) - Share HttpClient instances and connection resources
