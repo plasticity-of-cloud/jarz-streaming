@@ -61,7 +61,7 @@
         
         <!-- Dependencies -->
         <zstd-jni.version>1.5.7-6</zstd-jni.version>
-        <aws-sdk.version>2.41.19</aws-sdk.version>
+        <aws-sdk.version>2.41.34</aws-sdk.version>
         <junit.version>5.14.2</junit.version>
         <assertj.version>3.27.7</assertj.version>
         <jmh.version>1.37</jmh.version>
