@@ -5,6 +5,7 @@ import org.junit.jupiter.api.*;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -37,7 +38,9 @@ import static org.assertj.core.api.Assertions.*;
 class S3JarzIntegrationTest {
 
     @Container
-    static MinIOContainer minioContainer = new MinIOContainer("minio/minio:RELEASE.2023-12-07T04-16-00Z")
+    static MinIOContainer minioContainer = new MinIOContainer(DockerImageName
+            .parse("dappros/minio:RELEASE.2025-09-07T16-13-09Z")
+            .asCompatibleSubstituteFor("minio/minio"))
             .withUserName("minioadmin")
             .withPassword("minioadmin");
 

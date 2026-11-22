@@ -60,9 +60,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
         <!-- Dependencies -->
-        <zstd-jni.version>1.5.7-7</zstd-jni.version>
-        <aws-sdk.version>2.41.34</aws-sdk.version>
-        <junit.version>5.14.3</junit.version>
+        <zstd-jni.version>1.5.7-26</zstd-jni.version>
+        <aws-sdk.version>2.59.0</aws-sdk.version>
+        <junit.version>5.14.4</junit.version>
         <assertj.version>3.27.7</assertj.version>
         <jmh.version>1.37</jmh.version>
         <testcontainers.version>1.21.4</testcontainers.version>
@@ -147,7 +147,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.15.0</version>
+                    <version>3.16.0</version>
                     <configuration>
                         <release>${maven.compiler.release}</release>
                     </configuration>
