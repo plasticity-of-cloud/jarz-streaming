@@ -60,7 +60,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
         <!-- Dependencies -->
-        <zstd-jni.version>1.5.7-26</zstd-jni.version>
+        <zstd-jni.version>1.5.7-28</zstd-jni.version>
         <aws-sdk.version>2.59.0</aws-sdk.version>
         <junit.version>5.14.4</junit.version>
         <assertj.version>3.27.7</assertj.version>
