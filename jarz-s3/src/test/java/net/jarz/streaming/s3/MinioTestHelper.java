@@ -33,7 +33,8 @@ public class MinioTestHelper implements AutoCloseable {
     private S3Client s3Client;
     
     public MinioTestHelper() {
-        this.container = new MinIOContainer(DockerImageName.parse("minio/minio:latest"))
+        this.container = new MinIOContainer(DockerImageName.parse("dappros/minio:RELEASE.2025-09-07T16-13-09Z")
+            .asCompatibleSubstituteFor("minio/minio"))
             .withUserName(ACCESS_KEY)
             .withPassword(SECRET_KEY);
     }
